@@ -885,7 +885,7 @@ EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GUIShowAbout
-; Description ...: Fonction qui renvoi une GUI "A propos"
+; Description ...: Renvoi une GUI "A propos"
 ; Syntax.........: _YDTool_GUIShowAbout()
 ; Parameters ....: 
 ; Return values .: True
@@ -932,6 +932,31 @@ Func _YDTool_GUIShowAbout()
     Return True
 EndFunc
 
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_WinIsFlash
+; Description ...: Verifie si une fenetre clignotante est présent pour le handle passe en parametre
+; Syntax.........: _YDTool_WinIsFlash($_hWnd)
+; Parameters ....: $_hWnd       - Handle a verifier
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 21/02/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_WinIsFlash($_hWnd)
+    Local $sFuncName = "_YDTool_WinIsFlash"
+    If WinActive($_hWnd) Then Return False
+    Local $tFLASHWINFO = DllStructCreate("uint;hwnd;dword;uint;dword")
+    DllStructSetData($tFLASHWINFO, 1, 20)
+    DllStructSetData($tFLASHWINFO, 2, WinGetHandle($_hWnd))
+    Local $a = DllCall("user32.dll", "int", "FlashWindowEx", "ptr", DllStructGetPtr($tFLASHWINFO))
+	If $a[0] > 0 Then 
+        _YDLogger_Log("Flash detecte !", $sFuncName)
+        Return True
+    EndIf
+	Return False
+EndFunc
 
 
 
