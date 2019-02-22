@@ -21,6 +21,8 @@
 #include <GUIConstants.au3>
 ; Includes
 #include <Misc.au3>
+#include <Array.au3>
+#include <Date.au3>
 ; ===============================================================================================================================
 
 ; #VARIABLES# ===================================================================================================================
@@ -48,7 +50,7 @@ _YDGVars_Set("sPulseLogPathLocalAdminShare", StringReplace(_YDGVars_Get("sPulseL
 ; ===============================================================================================================================
 Func _YDTool_IsPing($_sHost)
     Local $sFuncName = "_YDTool_IsPing"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $iPing = Ping($_sHost, 150)
     If $iPing = 0 Then
         _YDLogger_Log("Pas de reponse au ping", $sFuncName)
@@ -73,7 +75,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_IsAdminShare($_sHost)
     Local $sFuncName = "_YDTool_CheckAdministrativeShare"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     If FileExists("\\" & $_sHost & "\c$") = 0 Then
         _YDLogger_Error("Partage administratif non accessible !", $sFuncName)
         Return False
@@ -97,7 +99,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_Is7zipInstalled($_sHost)
     Local $sFuncName = "_YDTool_Is7zipInstalled"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $s7zExeFullPath = "\\" & $_sHost & "\" & _YDTool_Get7zipExeFullPath(True)
     _YDLogger_Var("$s7zExeFullPath", $s7zExeFullPath, $sFuncName)
     If FileExists($s7zExeFullPath) = 0 Then
@@ -124,7 +126,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_IsOpenSshInstalled($_sHost, $_sOpenSshClient = "Nytrio")
     Local $sFuncName = "_YDTool_IsOpenSshInstalled"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $sOpenSshExeFullPathLocal = _YDTool_GetOpenSshExeFullPath(True, $_sOpenSshClient)
     _YDLogger_Var("$sOpenSshExeFullPathLocal", $sOpenSshExeFullPathLocal, $sFuncName)
     If FileExists("\\" & $_sHost & "\" & $sOpenSshExeFullPathLocal) = 0 Then
@@ -153,10 +155,10 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_IsServiceRunning($_sHost, $_sServiceName, $_sFilterKey = "", $_sFilterValue = "")
     Local $sFuncName = "_YDTool_IsServiceRunning"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
-    _YDLogger_Var("$_sServiceName", $_sServiceName, $sFuncName)
-    _YDLogger_Var("$_sFilterKey", $_sFilterKey, $sFuncName)
-    _YDLogger_Var("$_sFilterValue", $_sFilterValue, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    _YDLogger_Var("$_sServiceName", $_sServiceName, $sFuncName, 2)
+    _YDLogger_Var("$_sFilterKey", $_sFilterKey, $sFuncName, 2)
+    _YDLogger_Var("$_sFilterValue", $_sFilterValue, $sFuncName, 2)
     Local $sReturn = False
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
@@ -196,9 +198,9 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_ExecuteCommandWithPsExec($_sHost, $_sCommand, $_sPsExecFullPath)
     Local $sFuncName = "_YDTool_ExecuteCommandWithPsExec"
-    _YDLogger_Var("$_sPsExecFullPath", $_sPsExecFullPath, $sFuncName)
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
-    _YDLogger_Var("$_sCommand", $_sCommand, $sFuncName)
+    _YDLogger_Var("$_sPsExecFullPath", $_sPsExecFullPath, $sFuncName, 2)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    _YDLogger_Var("$_sCommand", $_sCommand, $sFuncName, 2)
     ; On verifie que le le chemin du PsExec est accessible
     If FileExists($_sPsExecFullPath) = 0 Then
         _YDLogger_Error($_sPsExecFullPath & " innacessible !", $sFuncName)
@@ -243,7 +245,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_IsPulseLogSuccess($_sPulseLogFullPath)
     Local $sFuncName = "_YDTool_IsPulseLogSuccess"
-    _YDLogger_Var("$_sPulseLogFullPath", $_sPulseLogFullPath, $sFuncName)
+    _YDLogger_Var("$_sPulseLogFullPath", $_sPulseLogFullPath, $sFuncName, 2)
     ; On sort si fichier inaccessible
     If FileExists($_sPulseLogFullPath) = 0 Then
         _YDLogger_Error($_sPulseLogFullPath & " inaccessible !", $sFuncName)
@@ -365,7 +367,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_ConvertPathToAdminShare($_sLocalPath)
     Local $sFuncName = "_YDTool_ConvertPathToAdminShare"
-    _YDLogger_Var("$_sLocalPath", $_sLocalPath, $sFuncName)
+    _YDLogger_Var("$_sLocalPath", $_sLocalPath, $sFuncName, 2)
     Local $sReturn = StringReplace($_sLocalPath, ":", "$")
     _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
     Return $sReturn
@@ -384,7 +386,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetProgramFilesPath($_bAdminShare = False)
     Local $sFuncName = "_YDTool_GetProgramFilesPath"
-    _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName)
+    _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName, 2)
     Local $sReturn = ($_bAdminShare = True) ? _YDTool_ConvertPathToAdminShare(_YDGVars_Get("sProgramFilesPath")) : _YDGVars_Get("sProgramFilesPath")
     _YDLogger_Var("$sReturn",$sReturn,  $sFuncName)
     Return $sReturn
@@ -444,7 +446,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_Get7zipExeFullPath($_bAdminShare = False)
     Local $sFuncName = "_YDTool_Get7zipExeFullPath"
-    _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName)
+    _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName, 2)
     Local $sProgramFilesPath = _YDTool_GetProgramFilesPath($_bAdminShare)
     _YDLogger_Var("$sProgramFilesPath", $sProgramFilesPath, $sFuncName)
     Local $sReturn = $sProgramFilesPath & "\7-zip\7z.exe"
@@ -466,7 +468,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetOpenSshExeFullPath($_bAdminShare = False, $_sOpenSshClient = "Nytrio")
     Local $sFuncName = "_YDTool_GetOpenSshExeFullPath"
-    _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName)
+    _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName, 2)
     Local $sReturn = _YDTool_GetProgramFilesPath($_bAdminShare) & "\" & $_sOpenSshClient & "\OpenSSH\bin\cygrunsrv.exe"
     _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
     Return $sReturn
@@ -486,7 +488,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_CreateFolderIfNotExist($_sPath)
     Local $sFuncName = "_YDTool_CreateFolderIfNotExist"
-    _YDLogger_Var("$_sPath", $_sPath, $sFuncName)
+    _YDLogger_Var("$_sPath", $_sPath, $sFuncName, 2)
     If DirGetSize($_sPath) = -1 And DirCreate($_sPath) = 0 Then
         _YDLogger_Error("Creation dossier impossible : " & $_sPath, $sFuncName)
         Return False
@@ -511,7 +513,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_DeleteFolderIfExist($_sPath, $_iOption = 1)
     Local $sFuncName = "_YDTool_DeleteFolderIfExist"
-    _YDLogger_Var("$_sPath", $_sPath, $sFuncName)
+    _YDLogger_Var("$_sPath", $_sPath, $sFuncName, 2)
     If DirGetSize($_sPath) = -1 Then
          _YDLogger_Error($_sPath & " : dossier innexistant !", $sFuncName)
         Return False
@@ -539,7 +541,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_DeleteFileIfExist($_sFullPath)
     Local $sFuncName = "_YDTool_DeleteFileIfExist"
-    _YDLogger_Var("$_sPath", $_sFullPath, $sFuncName)
+    _YDLogger_Var("$_sPath", $_sFullPath, $sFuncName, 2)
     If FileDelete($_sFullPath) = 0 Then
         _YDLogger_Error("Suppression fichier impossible : " & $_sFullPath, $sFuncName)
         Return False
@@ -565,8 +567,8 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_CopyFile($_sSourceFullPath, $_sDestinationFullPath, $_iOption = $FC_OVERWRITE + $FC_CREATEPATH)
     Local $sFuncName = "_YDTool_CopyFile"
-    _YDLogger_Var("$_sSourcePath", $_sSourceFullPath, $sFuncName)
-    _YDLogger_Var("$_sDestinationPath", $_sDestinationFullPath, $sFuncName)
+    _YDLogger_Var("$_sSourcePath", $_sSourceFullPath, $sFuncName, 2)
+    _YDLogger_Var("$_sDestinationPath", $_sDestinationFullPath, $sFuncName, 2)
     _YDLogger_Var("$_iOption", $_iOption, $sFuncName)
     If FileCopy($_sSourceFullPath, $_sDestinationFullPath, $_iOption) = 0 Then
         _YDLogger_Error("Copie du fichier impossible : " & $_sDestinationFullPath, $sFuncName)
@@ -592,8 +594,8 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_ExtractArchive($_sSourceFullPath, $_sDestinationPath)
     Local $sFuncName = "_YDTool_ExtractArchive"
-    _YDLogger_Var("$_sSourceFullPath", $_sSourceFullPath, $sFuncName)
-    _YDLogger_Var("$_sDestinationPath", $_sDestinationPath, $sFuncName)
+    _YDLogger_Var("$_sSourceFullPath", $_sSourceFullPath, $sFuncName, 2)
+    _YDLogger_Var("$_sDestinationPath", $_sDestinationPath, $sFuncName, 2)
     Local $Local7zipExeFullPath = _YDTool_Get7zipExeFullPath(False)
     _YDLogger_Var("$Local7zipExeFullPath", $Local7zipExeFullPath, $sFuncName)
     Local $sCommandToRun = @ComSpec & " /c " & ' "' & $Local7zipExeFullPath & '" x -y ' & $_sSourceFullPath & ' -o' & $_sDestinationPath & '\'
@@ -647,7 +649,6 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_SetTrayTip($_sTitle, $_sMsg, $_iTimeout = 3000, $_iOption = 0)
     Local $sFuncName = "_YDTool_SetTrayTip"
-    ;TrayTip($_sTitle, $_sMsg, $_iTimeout, $_iOption)
     TrayTip($_sTitle, $_sMsg, 0, $_iOption)
     _YDLogger_Var("$_sMsg", $_sMsg, $sFuncName)
     If ($_iTimeout > 0) Then
@@ -671,7 +672,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetHostName($_sIP)
     Local $sFuncName = "_YDTool_GetHostName"
-    _YDLogger_Var("$_sIP", $_sIP, $sFuncName)
+    _YDLogger_Var("$_sIP", $_sIP, $sFuncName, 2)
     Local $sReturn = ""
     If _YDTool_IsPing($_sIP) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sIP & "\root\cimv2")
@@ -704,7 +705,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetHostLoggedUserName($_sHost)
     Local $sFuncName = "_YDTool_GetHostLoggedUserName"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $sReturn = ""
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
@@ -737,7 +738,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetHostMacAddress($_sHost)
     Local $sFuncName = "_YDTool_GetHostMacAddress"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $sReturn = ""
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
@@ -770,7 +771,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetHostIpAddress($_sHost)
     Local $sFuncName = "_YDTool_GetHostIpAddress"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $sReturn = ""
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
@@ -803,7 +804,7 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetHostIpSubnet($_sHost)
     Local $sFuncName = "_YDTool_GetHostIpSubnet"
-    _YDLogger_Var("$_sHost", $_sHost, $sFuncName)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $sReturn = ""
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
@@ -956,6 +957,60 @@ Func _YDTool_WinIsFlash($_hWnd)
         Return True
     EndIf
 	Return False
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_DeleteOldFiles
+; Description ...: Supprime les fichiers d'un répertoire donné selon un nombre de jour
+; Syntax.........: _YDTool_DeleteOldFiles($_sPath, $_nbdays[], $_sFilter])
+; Parameters ....: $_sPath      - Chemin du dossier (au format D:\monchemin)
+;                  $_nbdays     - Nombre de jours de retention
+;                  $_sFilter    - Filtre sur les extensions par exemple (*.csv)
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 21/02/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_DeleteOldFiles($_sPath, $_nbdays, $_sFilter = "*" & $YDLOGGER_LOGEXT)
+    Local $sFuncName = "_YDTool_DeleteOldFiles"
+    Local $sTijd
+    _YDLogger_Var("$_sPath", $_sPath, $sFuncName, 2)
+    _YDLogger_Var("$_nbdays", $_nbdays, $sFuncName, 2)
+    _YDLogger_Var("$_sFilter", $_sFilter, $sFuncName, 2)
+    ; On verifie que le chemin est OK
+    If FileExists($_sPath) = 0 Then
+        _YDLogger_Error("Le répertoire " & $_sPath & " n'existe pas !", $sFuncName)
+        Return False
+    EndIf
+    ; On verifie que le nombre de jour est OK
+    If IsNumber($_nbdays) And $_nbdays <= 0 Then
+        _YDLogger_Error("Le nombre de jours " & $_nbdays & " est incorrect !", $sFuncName)
+        Return False
+    EndIf
+    ; On verifie que le filtre est OK
+    If $_sFilter = "" Then
+        _YDLogger_Error("Un filtre doit etre appliqué !", $sFuncName)
+        Return False
+    EndIf
+    ; On recupere les infos des fichiers dans un tableau
+    Local $aFiles = _FileListToArray($_sPath, $_sFilter)
+    ; On sort si tableau vide ou 
+    If Not IsArray($aFiles) Or UBound($aFiles) = 0 Then 
+        _YDLogger_Error("Erreur lors de la creation du tableau !", $sFuncName)
+        Return False
+    EndIf
+    _YDLogger_Var("UBound($aFiles)", UBound($aFiles), $sFuncName, 2)
+    ; Si tout est OK, on boucle sur le tableau
+    For $i = 1 To UBound($aFiles) - 1
+        $sTijd = StringRegExpReplace(FileGetTime($_sPath & "\" & $aFiles[$i], 0, 1), "(.{4})(.{2})(.{2})(.{2})(.{2})(.{2})", "${1}/${2}/${3} ${4}:${5}:${6}") ; Last modified Date
+        ;_YDLogger_Var("$sTijd", $sTijd, $sFuncName, 2)
+        If _DateDiff('D', $sTijd, _NowCalc()) > $_nbdays Then ; 'D' = Difference in days between the given dates
+            _YDTool_DeleteFileIfExist($_sPath & "\" & $aFiles[$i])
+        EndIf
+    Next
+    Return True
 EndFunc
 
 
