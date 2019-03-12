@@ -64,6 +64,8 @@ Func _YDLogger_Init($_sLogPath = "", $_sLogType = $YDLOGGER_LOGTYPE_BOTH)
         EndIf
         ; On affecte la valeur trouvee a la variable globale
         _YDGVars_Set("sLogLevel", $iLoglevel)
+    Else
+        _YDGVars_Set("sLogLevel", $YDLOGGER_LOGLEVEL)
     EndIf    
     ; On affecte le type choisi a la variable globale
     Switch (StringLower($_sLogType))
