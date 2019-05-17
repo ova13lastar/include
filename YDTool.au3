@@ -277,7 +277,7 @@ EndFunc
 ; Name...........: _YDTool_IsSingleton
 ; Description ...: Verifier si l application est lancee singleton
 ; Syntax.........: _YDTool_IsSingleton()
-; Parameters ....: 
+; Parameters ....:
 ; Return values .: Success      - True
 ;                  Failure      - False
 ; Author ........: yann.daniel@assurance-maladie.fr
@@ -291,7 +291,7 @@ Func _YDTool_IsSingleton()
         Local $sMsg = "L'application " & _YDGVars_Get("sAppName") & " est déjà en cours d'exécution !"
         _YDTool_SetMsgBoxError($sMsg, $sFuncName)
         Return False
-    Else 
+    Else
         Return True
     EndIf
 EndFunc
@@ -300,8 +300,8 @@ EndFunc
 ; Name...........: _YDTool_ExitConfirm
 ; Description ...: Confirmation de fermeture via le tray
 ; Syntax.........: _YDTool_ExitConfirm()
-; Parameters ....: 
-; Return values .: 
+; Parameters ....:
+; Return values .:
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......: 21/02/2019
 ; Remarks .......:
@@ -322,8 +322,8 @@ EndFunc
 ; Name...........: _YDTool_ExitApp
 ; Description ...: Fonction uniquement lancee a la fermture du programme
 ; Syntax.........: _YDTool_ExitApp()
-; Parameters ....: 
-; Return values .: 
+; Parameters ....:
+; Return values .:
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......: 21/02/2019
 ; Remarks .......:
@@ -654,7 +654,7 @@ Func _YDTool_SetTrayTip($_sTitle, $_sMsg, $_iTimeout = 3000, $_iOption = 0)
     If ($_iTimeout > 0) Then
 		Sleep($_iTimeout)
 		TrayTip("", "", 0, $_iOption)
-	Endif    
+	Endif
     Return False
 EndFunc
 
@@ -791,6 +791,41 @@ Func _YDTool_GetHostIpAddress($_sHost)
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetHostSite
+; Description ...: Recupere le site du Host donne
+; Syntax.........: _YDTool_GetHostSite($_sHost)
+; Parameters ....: $_sHost       - Nom du PMF ou IP
+; Return values .: Success      - $sReturn
+;                  Failure      - ""
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......:
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetHostSite($_sHost)
+    Local $sFuncName = "_YDTool_GetHostSite"
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    Local $sReturn = ""
+	Local $sIP = _YDTool_GetHostIpAddress($_sHost)
+    Switch $sIP
+		Case "55.123.4.1" To "55.123.6.255"
+			$sReturn = "ARRAS"
+		Case "55.126.8.1" To "55.126.12.255"
+			$sReturn = "BETHUNE"
+		Case "55.126.36.1" To "55.126.39.255"
+			$sReturn = "BRUAY"
+		Case "55.126.16.1" To "55.126.19.255"
+			$sReturn = "HENIN"
+		Case "55.126.4.1" To "55.126.7.255"
+			$sReturn = "LENS"
+		Case "55.126.28.1" To "55.126.31.255"
+			$sReturn = "LIEVIN"
+	EndSwitch
+    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
+    Return $sReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GetHostIpSubnet
 ; Description ...: Recupere l'adresse IP de sous-reseau du Host donne
 ; Syntax.........: _YDTool_GetHostIpSubnet($_sHost)
@@ -888,7 +923,7 @@ EndFunc
 ; Name...........: _YDTool_GUIShowAbout
 ; Description ...: Renvoi une GUI "A propos"
 ; Syntax.........: _YDTool_GUIShowAbout()
-; Parameters ....: 
+; Parameters ....:
 ; Return values .: True
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......: 21/02/2019
@@ -952,7 +987,7 @@ Func _YDTool_WinIsFlash($_hWnd)
     DllStructSetData($tFLASHWINFO, 1, 20)
     DllStructSetData($tFLASHWINFO, 2, WinGetHandle($_hWnd))
     Local $a = DllCall("user32.dll", "int", "FlashWindowEx", "ptr", DllStructGetPtr($tFLASHWINFO))
-	If $a[0] > 0 Then 
+	If $a[0] > 0 Then
         _YDLogger_Log("Flash detecte !", $sFuncName)
         Return True
     EndIf
@@ -996,8 +1031,8 @@ Func _YDTool_DeleteOldFiles($_sPath, $_nbdays, $_sFilter = "*" & $YDLOGGER_LOGEX
     EndIf
     ; On recupere les infos des fichiers dans un tableau
     Local $aFiles = _FileListToArray($_sPath, $_sFilter)
-    ; On sort si tableau vide ou 
-    If Not IsArray($aFiles) Or UBound($aFiles) = 0 Then 
+    ; On sort si tableau vide ou
+    If Not IsArray($aFiles) Or UBound($aFiles) = 0 Then
         _YDLogger_Error("Erreur lors de la creation du tableau !", $sFuncName)
         Return False
     EndIf
@@ -1011,6 +1046,88 @@ Func _YDTool_DeleteOldFiles($_sPath, $_nbdays, $_sFilter = "*" & $YDLOGGER_LOGEX
         EndIf
     Next
     Return True
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetDefaultPrinter
+; Description ...: Recupere le nom de l'imprimante par defaut
+; Syntax.........: _YDTool_GetDefaultPrinter($_sHost)
+; Parameters ....: $_sHost       - Nom du PMF ou IP
+; Return values .: Success      - $sReturn
+;                  Failure      - ""
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 30/04/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetDefaultPrinter($_sHost)
+	Local $sFuncName = "_YDTool_GetDefaultPrinter"
+	_YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+	Local $sReturn = ""
+    Local $objWMIService = ObjGet("winmgmts:\\" & $_sHost & "\root\CIMV2")
+	Local $colItems = $objWMIService.ExecQuery("SELECT * FROM Win32_Printer", "WQL", 0x10 + 0x20)
+	If IsObj($colItems) then
+	   For $objItem In $colItems
+			;_YDLogger_Var("$objItem.DeviceID", $objItem.DeviceID, $sFuncName)
+			If  $objitem.Default <> 0 Then
+				$sReturn = $objItem.DeviceID
+			Endif
+		Next
+	Endif
+	_YDLogger_Var("$sReturn", $sReturn, $sFuncName)
+    Return $sReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_SetDefaultPrinter
+; Description ...: Met l'imprimante passee en parametre comme imprimante par defaut
+; Syntax.........: _YDTool_SetDefaultPrinter($_sPrinter)
+; Parameters ....: $_sPrinter   - Nom de l'imprimante
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 30/04/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_SetDefaultPrinter($_sPrinter)
+    Local $sFuncName = "_YDTool_SetDefaultPrinter"
+	_YDLogger_Var("$_sPrinter", $_sPrinter, $sFuncName, 2)
+    RunWait(@ComSpec & " /c RUNDLL32 PRINTUI.DLL,PrintUIEntry /q /y /n " & '"' & $_sPrinter & '"', "", @SW_HIDE)
+	If @error Then
+		_YDLogger_Error("Erreur lors de la mise a jour de l imprimante par defaut !")
+		Return False
+	Else
+		Return True
+	EndIf
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetAppConfValue
+; Description ...: Recupere la valeur d une cle lue dans le fichier de config.ini
+; Syntax.........: _YDTool_GetAppConfValue($_sIniSection, $_sIniKey)
+; Parameters ....: $_sIniSection	- Nom de la section
+; 				   $_sIniKey		- Nom de la cle
+; Return values .: Success      - $sReturn
+;                  Failure      - ""
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 30/04/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetAppConfValue($_sIniSection, $_sIniKey)
+	Local $sFuncName = "_YDTool_GetAppConfValue"
+	Local $sReturn = ""
+	If Not FileExists(_YDGVars_Get("sAppConfFile")) Then
+		_YDLogger_Error("Fichier introuvable : " & _YDGVars_Get("sAppConfFile"))
+	Else
+		$sReturn = IniRead(_YDGVars_Get("sAppConfFile"), $_sIniSection, $_sIniKey, "")
+		If @error Then
+			_YDLogger_Error("Lecture impossible du fichier : " & _YDGVars_Get("sAppConfFile"))
+		EndIf
+	EndIf
+	_YDLogger_Var("$sReturn", $sReturn, $sFuncName)
+    Return $sReturn
 EndFunc
 
 

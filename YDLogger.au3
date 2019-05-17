@@ -47,11 +47,11 @@ Global $__g_bLogInit        = False
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......:
 ; Remarks .......: Cette fonction doit etre appellee en second
-; Related .......: 
+; Related .......:
 ; ===============================================================================================================================
 Func _YDLogger_Init($_sLogPath = "", $_sLogType = $YDLOGGER_LOGTYPE_BOTH)
     ; On sort si pas de variables globales
-    If _YDGVars_Len = 0 Then 
+    If _YDGVars_Len = 0 Then
         MsgBox($MB_SYSTEMMODAL + $MB_ICONERROR + $MB_OK, "ERREUR", "Variables globales vides !! L'application ne peut pas s'executer.")
         Exit
     EndIf
@@ -66,7 +66,7 @@ Func _YDLogger_Init($_sLogPath = "", $_sLogType = $YDLOGGER_LOGTYPE_BOTH)
         _YDGVars_Set("sLogLevel", $iLoglevel)
     Else
         _YDGVars_Set("sLogLevel", $YDLOGGER_LOGLEVEL)
-    EndIf    
+    EndIf
     ; On affecte le type choisi a la variable globale
     Switch (StringLower($_sLogType))
         Case "console"
@@ -110,8 +110,8 @@ EndFunc
 ;                  Failure          - False
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......:
-; Remarks .......: 
-; Related .......: 
+; Remarks .......:
+; Related .......:
 ; ===============================================================================================================================
 Func _YDLogger_Log($_sLogMsg, $_sFuncName = $YDLOGGER_FUNCNAME, $_iLogLevel = _YDGVars_Get("sLogLevel"))
     ; On ne loggue que si demande
@@ -140,8 +140,8 @@ EndFunc
 ;                  Failure      - 0
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......:
-; Remarks .......: 
-; Related .......: 
+; Remarks .......:
+; Related .......:
 ; ===============================================================================================================================
 Func _YDLogger_Error($_sLogMsg, $_sFuncName = $YDLOGGER_FUNCNAME, Const $_iError = @error, Const $_iExtended = @extended, Const $_iScriptLineNumber = @ScriptLineNumber)
     ; On logge
@@ -164,14 +164,14 @@ EndFunc
 ;                  Failure      - 0
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......:
-; Remarks .......: 
-; Related .......: 
+; Remarks .......:
+; Related .......:
 ; ===============================================================================================================================
 Func _YDLogger_Sep($_iSepNumber = $YDLOGGER_SEP_NUMBER, $_sSepCar = $YDLOGGER_SEP_CAR)
     Local $sSep = ""
     For $i = 1 To $_iSepNumber Step +1
         $sSep = $sSep & $_sSepCar
-    Next 
+    Next
     __YDLogger_SetLog($sSep)
     Return True
 EndFunc
@@ -188,8 +188,8 @@ EndFunc
 ;                  Failure          - False
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......:
-; Remarks .......: 
-; Related .......: 
+; Remarks .......:
+; Related .......:
 ; ===============================================================================================================================
 Func _YDLogger_Var($_sLogVarName, $_sLogVarValue, $_sFuncName = $YDLOGGER_FUNCNAME, $_iLogLevel = _YDGVars_Get("sLogLevel"))
     ; On ne loggue que si demande
@@ -211,13 +211,13 @@ EndFunc
 ; Name...........: _YDLogger_LogAllGVars
 ; Description ...: Ecrit une ligne de log pour chaque variable globale declaree
 ; Syntax.........: _YDLogger_LogAllGVars([$_iLogLevel])
-; Parameters ....: 
+; Parameters ....:
 ; Return values .: Success          - True
 ;                  Failure          - False
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......: 20/02/2019
-; Remarks .......: 
-; Related .......: 
+; Remarks .......:
+; Related .......:
 ; ===============================================================================================================================
 Func _YDLogger_LogAllGVars($_iLogLevel = _YDGVars_Get("sLogLevel"))
     ; On ne loggue que si demande
@@ -244,14 +244,14 @@ EndFunc
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......:
 ; Remarks .......: Internal Use
-; Related .......: 
+; Related .......:
 ; ===============================================================================================================================
 Func __YDLogger_SetLog($_sLogMsg, $_sLogCase = "")
     ; On ne genere pas de log si loglevel = 0 (sortie de la fonction)
     If (_YDGVars_Get("sLogLevel") = 0 And $__g_bLogInit = False) Then Return True
     ; On sort en erreur si le Logger n'a pas été initialisé
     If _YDGVars_Get("sLogPath") = "" Then Exit MsgBox($MB_SYSTEMMODAL, "", "Le Logger n'a pas été initialisé !")
-    Local $sLogDateTime = @YEAR & "-" & @MON & "-" & @MDAY & " " & @HOUR & ":" & @MIN & ":" & @SEC    
+    Local $sLogDateTime = @YEAR & "-" & @MON & "-" & @MDAY & " " & @HOUR & ":" & @MIN & ":" & @SEC
     ; On gere le cas $YDLOGGER_LOGCASE_ERROR en rajoutant des infos + ConsoleWriteError
     If $_sLogCase = $YDLOGGER_LOGCASE_ERROR Then
         ConsoleWriteError($sLogDateTime & " : " &  $_sLogMsg & @CRLF)
