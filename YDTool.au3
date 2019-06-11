@@ -1130,6 +1130,32 @@ Func _YDTool_GetAppConfValue($_sIniSection, $_sIniKey)
     Return $sReturn
 EndFunc
 
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetAppConfSection
+; Description ...: Recupere un tableau contenant les valeurs d'une section du fichier de config.ini
+; Syntax.........: _YDTool_GetAppConfSection($_sIniSection)
+; Parameters ....: $_sIniSection	- Nom de la section
+; Return values .: $aReturn         - Tableau
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 30/04/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetAppConfSection($_sIniSection)
+	Local $sFuncName = "_YDTool_GetAppConfSection"
+	Local $aReturn
+	If Not FileExists(_YDGVars_Get("sAppConfFile")) Then
+		_YDLogger_Error("Fichier introuvable : " & _YDGVars_Get("sAppConfFile"))
+	Else
+		$aReturn = IniReadSection(_YDGVars_Get("sAppConfFile"), $_sIniSection)
+		If @error Then
+			_YDLogger_Error("Lecture impossible du fichier : " & _YDGVars_Get("sAppConfFile"))
+		EndIf
+	EndIf
+	_YDLogger_Var("$aReturn", $aReturn, $sFuncName)
+    Return $aReturn
+EndFunc
+
 
 
 
