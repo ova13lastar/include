@@ -31,9 +31,9 @@ _YDGVars_Set("sPulseRootPathServer", "\\55.126.5.250\bei\PULSE2")
 _YDGVars_Set("sPulseAntoolsPathServer", _YDGVars_Get("sPulseRootPathServer") & "\_antools")
 _YDGVars_Set("sPsExecExeFullPathServer", _YDGVars_Get("sPulseAntoolsPathServer") & "\" & "PsExec.exe")
 _YDGVars_Set("sAntoolsPathLocal", "C:\APPLILOC\_antools")
-_YDGVars_Set("sAntoolsPathLocalAdminShare", StringReplace(_YDGVars_Get("sAntoolsPathLocal"), ":", "$"))
+_YDGVars_Set("sAntoolsPathLocalAdminShare", _YDTool_ConvertPathToAdminShare(_YDGVars_Get("sAntoolsPathLocal")))
 _YDGVars_Set("sPulseLogPathLocal", "C:\PMF\RAPPINST\_pulse.log")
-_YDGVars_Set("sPulseLogPathLocalAdminShare", StringReplace(_YDGVars_Get("sPulseLogPathLocal"), ":", "$"))
+_YDGVars_Set("sPulseLogPathLocalAdminShare", _YDTool_ConvertPathToAdminShare(_YDGVars_Get("sPulseLogPathLocal")))
 ; ===============================================================================================================================
 
 ; #FUNCTION# ====================================================================================================================
@@ -63,14 +63,14 @@ EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_IsAdminShare
-; Description ...: Verifie si l'utilisateur a acces au partage administrtaif sur un Host donne
+; Description ...: Verifie si l'utilisateur a acces au partage administratif sur un Host donne
 ; Syntax.........: _YDTool_IsAdminShare($_sHost)
 ; Parameters ....: $_sHost       - Nom du PMF ou IP
 ; Return values .: Success      - True
 ;                  Failure      - False
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
-; Remarks .......:
+; Modified.......: 01/10/2019
+; Remarks .......: DEPRECATED !! -> Remplacé par _YDTool_IsHostAdminShare()
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_IsAdminShare($_sHost)
@@ -159,7 +159,7 @@ Func _YDTool_IsServiceRunning($_sHost, $_sServiceName, $_sFilterKey = "", $_sFil
     _YDLogger_Var("$_sServiceName", $_sServiceName, $sFuncName, 2)
     _YDLogger_Var("$_sFilterKey", $_sFilterKey, $sFuncName, 2)
     _YDLogger_Var("$_sFilterValue", $_sFilterValue, $sFuncName, 2)
-    Local $sReturn = False
+    Local $bReturn = False
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
@@ -172,14 +172,52 @@ Func _YDTool_IsServiceRunning($_sHost, $_sServiceName, $_sFilterKey = "", $_sFil
             If IsObj($colItems) Then
                 For $objItem In $colItems
                     If $objItem.State = "Running" Then
-                        $sReturn = True
+                        $bReturn = True
                     EndIf
                 Next
             Endif
         EndIf
     EndIf
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+    _YDLogger_Var("$bReturn", $bReturn, $sFuncName)
+    Return $bReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_IsProcessRunning
+; Description ...: Verifie si un process Windows est actif sur un Host donne
+; Syntax.........: _YDTool_IsProcessRunning($_sHost, $_sProcessName, [$_sPathItem])
+; Parameters ....: $_sHost           - Nom du PMF ou IP
+;                  $_sServiceName    - Nom du processus Windows
+;                  $_sPathItem       - Item present dans le chemin de l'executable
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......:
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_IsProcessRunning($_sHost, $_sProcessName, $_sPathItem = "")
+    Local $sFuncName = "_YDTool_IsProcessRunning"
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    _YDLogger_Var("$_sProcessName", $_sProcessName, $sFuncName, 2)
+    Local $bReturn = False
+	If _YDTool_IsPing($_sHost) Then
+        Local $oWMI = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
+		If Not @error Then
+            Local $oProcessList = $oWMI.ExecQuery ("SELECT * FROM Win32_Process Where Name = '" & $_sProcessName & "'", "WQL", 0x30)
+            If IsObj($oProcessList) Then
+				For $sProcess in $oProcessList
+					_YDLogger_Var("$sProcess.Name", $sProcess.Name, $sFuncName, 2)
+					_YDLogger_Var("$sProcess.ExecutablePath", $sProcess.ExecutablePath, $sFuncName, 2)
+					If $_sPathItem == "" Or StringInStr($sProcess.ExecutablePath, $_sPathItem) Then
+						$bReturn = True
+					EndIf
+				Next
+            Endif
+        EndIf
+    EndIf
+    _YDLogger_Var("$bReturn", $bReturn, $sFuncName)
+    Return $bReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -201,6 +239,7 @@ Func _YDTool_ExecuteCommandWithPsExec($_sHost, $_sCommand, $_sPsExecFullPath)
     _YDLogger_Var("$_sPsExecFullPath", $_sPsExecFullPath, $sFuncName, 2)
     _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     _YDLogger_Var("$_sCommand", $_sCommand, $sFuncName, 2)
+	Local $bReturn = False
     ; On verifie que le le chemin du PsExec est accessible
     If FileExists($_sPsExecFullPath) = 0 Then
         _YDLogger_Error($_sPsExecFullPath & " innacessible !", $sFuncName)
@@ -209,7 +248,7 @@ Func _YDTool_ExecuteCommandWithPsExec($_sHost, $_sCommand, $_sPsExecFullPath)
     ; On verifie que le Host est accessible
     If Not _YDTool_IsPing($_sHost) Then Return False
     ; Si la commande est un chemin, on verifie qu il est bien accessible en mode partage administratif
-    If StringInStr($_sCommand, "\") > 0 Then
+    If StringInStr($_sCommand, "\") > 0 And StringInStr($_sCommand, "cmd.exe") = 0  Then
         If FileExists("\\" & $_sHost & "\" & _YDTool_ConvertPathToAdminShare($_sCommand)) = 0 Then
             _YDLogger_Error($_sCommand & " innacessible !", $sFuncName)
             Return False
@@ -224,11 +263,13 @@ Func _YDTool_ExecuteCommandWithPsExec($_sHost, $_sCommand, $_sPsExecFullPath)
     ; Gestion des Return
     If (@error <> 0 And $iReturn > 0) Then
         _YDLogger_Error("Echec du lancement de la commande : " & $sCommandToRun, $sFuncName)
-        Return False
+        $bReturn =  False
     Else
         _YDLogger_Log("Lancement de la commande : " & $sCommandToRun, $sFuncName)
-        Return True
+        $bReturn =  True
     EndIf
+	_YDLogger_Var("$bReturn", $bReturn, $sFuncName)
+    Return $bReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -246,6 +287,7 @@ EndFunc
 Func _YDTool_IsPulseLogSuccess($_sPulseLogFullPath)
     Local $sFuncName = "_YDTool_IsPulseLogSuccess"
     _YDLogger_Var("$_sPulseLogFullPath", $_sPulseLogFullPath, $sFuncName, 2)
+	Local $bReturn = False
     ; On sort si fichier inaccessible
     If FileExists($_sPulseLogFullPath) = 0 Then
         _YDLogger_Error($_sPulseLogFullPath & " inaccessible !", $sFuncName)
@@ -262,15 +304,17 @@ Func _YDTool_IsPulseLogSuccess($_sPulseLogFullPath)
     EndIf
     ; On lit l'avant-derniere ligne
     Local $sLine = FileReadLine($hFileOpen, _FileCountLines($_sPulseLogFullPath) -1)
-     _YDLogger_Var("$sLine", $sLine)
+     _YDLogger_Var("$sLine", $sLine, $sFuncName)
     ; On ferme le fichier
     FileClose($hFileOpen)
     ; Gestion des retours
     If StringInStr($sLine, "(0:0)") > 0 Then
-        Return True
+        $bReturn = True
     Else
-        Return False
+        $bReturn = False
     EndIf
+	_YDLogger_Var("$bReturn", $bReturn, $sFuncName)
+    Return $bReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -287,13 +331,16 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_IsSingleton()
     Local $sFuncName = "_YDTool_IsSingleton"
+	Local $bReturn = False
     If _Singleton(_YDGVars_Get("sAppName"), 1) = 0 Then
         Local $sMsg = "L'application " & _YDGVars_Get("sAppName") & " est déjà en cours d'exécution !"
         _YDTool_SetMsgBoxError($sMsg, $sFuncName)
-        Return False
+        $bReturn = False
     Else
-        Return True
+        $bReturn = True
     EndIf
+	_YDLogger_Var("$bReturn", $bReturn, $sFuncName)
+    Return $bReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -359,18 +406,18 @@ EndFunc
 ; Description ...: Convertit un chemin au format "partage administratif"
 ; Syntax.........: _YDTool_ConvertPathToAdminShare($_sLocalPath)
 ; Parameters ....: $_sLocalPath - Chemin local
-; Return values .: $sReturn
+; Return values .: $bPathAdminShareReturn
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_ConvertPathToAdminShare($_sLocalPath)
     Local $sFuncName = "_YDTool_ConvertPathToAdminShare"
     _YDLogger_Var("$_sLocalPath", $_sLocalPath, $sFuncName, 2)
-    Local $sReturn = StringReplace($_sLocalPath, ":", "$")
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+    Local $bPathAdminShareReturn = StringReplace($_sLocalPath, ":", "$")
+    _YDLogger_Var("$bPathAdminShareReturn", $bPathAdminShareReturn, $sFuncName)
+    Return $bPathAdminShareReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -378,7 +425,7 @@ EndFunc
 ; Description ...: Renvoi le Path du dossier Program Files (selon architecture du PMF)
 ; Syntax.........: _YDTool_GetProgramFilesPath([$_bAdminShare])
 ; Parameters ....: $_bAdminShare - Vrai s il s agit d un partage administratif
-; Return values .: $sReturn
+; Return values .: $bProgramFilesPathReturn
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......:
 ; Remarks .......:
@@ -387,9 +434,9 @@ EndFunc
 Func _YDTool_GetProgramFilesPath($_bAdminShare = False)
     Local $sFuncName = "_YDTool_GetProgramFilesPath"
     _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName, 2)
-    Local $sReturn = ($_bAdminShare = True) ? _YDTool_ConvertPathToAdminShare(_YDGVars_Get("sProgramFilesPath")) : _YDGVars_Get("sProgramFilesPath")
-    _YDLogger_Var("$sReturn",$sReturn,  $sFuncName)
-    Return $sReturn
+    Local $bProgramFilesPathReturn = ($_bAdminShare = True) ? _YDTool_ConvertPathToAdminShare(_YDGVars_Get("sProgramFilesPath")) : _YDGVars_Get("sProgramFilesPath")
+    _YDLogger_Var("$bProgramFilesPathReturn", $bProgramFilesPathReturn, $sFuncName)
+    Return $bProgramFilesPathReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -580,6 +627,36 @@ Func _YDTool_CopyFile($_sSourceFullPath, $_sDestinationFullPath, $_iOption = $FC
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_CopyFileWithPsExec
+; Description ...: Copie d'un fichier - surcouche de FileCopy()
+; Syntax.........: _YDTool_CopyFileWithPsExec($_sHost, $_sSourceFullPath, $_sDestinationFullPath)
+; Parameters ....: $_sHost				  - Nom du PMF ou IP
+;				   $_sSourcePath         - Chemin du fichier source
+;                  $_sDestinationPath    - Chemin du fichier de destination
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......:
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_CopyFileWithPsExec($_sHost, $_sSourceFullPath, $_sDestinationFullPath)
+    Local $sFuncName = "_YDTool_CopyFileWithPsExec"
+	_YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    _YDLogger_Var("$_sSourcePath", $_sSourceFullPath, $sFuncName, 2)
+    _YDLogger_Var("$_sDestinationPath", $_sDestinationFullPath, $sFuncName, 2)
+	Local $sCommandToRun = @ComSpec & ' /c "copy /y ' & $_sSourceFullPath & ' ' & $_sDestinationFullPath & '"'
+	_YDLogger_Var("$sCommandToRun", $sCommandToRun, $sFuncName, 2)
+	If Not _YDTool_ExecuteCommandWithPsExec($_sHost, $sCommandToRun, _YDGVars_Get("sPsExecExeFullPathServer")) Then
+		_YDLogger_Error("Copie du fichier via PsExec impossible : " & $_sDestinationFullPath, $sFuncName)
+		Return False
+	Else
+		_YDLogger_Log("Copie du fichier via PsExec OK : " & $_sDestinationFullPath, $sFuncName)
+		Return True
+	Endif
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_ExtractArchive
 ; Description ...: Extrait une archive en local ou a partir d'un partage administratif
 ; Syntax.........: _YDTool_ExtractArchive($_sSourceFullPath, $_sDestinationPath)
@@ -609,6 +686,38 @@ Func _YDTool_ExtractArchive($_sSourceFullPath, $_sDestinationPath)
         _YDLogger_Log("Extraction du fichier OK : " & $_sDestinationPath, $sFuncName)
         Return True
     EndIf
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_ExtractArchiveWithPsExec
+; Description ...: Extrait une archive en local ou a partir d'un partage administratif
+; Syntax.........: _YDTool_ExtractArchiveWithPsExec($_sSourceFullPath, $_sDestinationPath, [$_sHost])
+; Parameters ....: $_sHost					- Nom du PMF ou IP
+; 				   $_sSourceFullPath        - Chemin du fichier source à extraire
+;                  $_sDestinationPath       - Chemin du fichier de destination
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 24/06/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_ExtractArchiveWithPsExec($_sHost, $_sSourceFullPath, $_sDestinationPath)
+    Local $sFuncName = "_YDTool_ExtractArchiveWithPsExec"
+	_YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    _YDLogger_Var("$_sSourceFullPath", $_sSourceFullPath, $sFuncName, 2)
+    _YDLogger_Var("$_sDestinationPath", $_sDestinationPath, $sFuncName, 2)
+    Local $Local7zipExeFullPath = _YDTool_Get7zipExeFullPath(False)
+    _YDLogger_Var("$Local7zipExeFullPath", $Local7zipExeFullPath, $sFuncName)
+	Local $sCommandToRun = @ComSpec & " /c " & ' "' & $Local7zipExeFullPath & '" x -y ' & $_sSourceFullPath & ' -o' & $_sDestinationPath & '\'
+    _YDLogger_Var("$sCommandToRun", $sCommandToRun, $sFuncName)
+	If Not _YDTool_ExecuteCommandWithPsExec($_sHost, $sCommandToRun, _YDGVars_Get("sPsExecExeFullPathServer")) Then
+		_YDLogger_Error("Extraction du fichier via PsExec impossible : " & $_sDestinationPath, $sFuncName)
+		Return False
+	Else
+		_YDLogger_Log("Extraction du fichier via PsExec OK : " & $_sDestinationPath, $sFuncName)
+		Return True
+	EndIf
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -662,18 +771,18 @@ EndFunc
 ; Name...........: _YDTool_GetHostName
 ; Description ...: Recupere le nom du PMF pour une IP donnee
 ; Syntax.........: _YDTool_GetHostName($_sIP)
-; Parameters ....: $_sIP     - Adresse IP
-; Return values .: Success      - $sReturn
+; Parameters ....: $_sIP     	- IP
+; Return values .: Success      - $sHostNameReturn
 ;                  Failure      - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_GetHostName($_sIP)
     Local $sFuncName = "_YDTool_GetHostName"
     _YDLogger_Var("$_sIP", $_sIP, $sFuncName, 2)
-    Local $sReturn = ""
+    Local $sHostNameReturn = ""
     If _YDTool_IsPing($_sIP) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sIP & "\root\cimv2")
         If Not @error Then
@@ -681,32 +790,32 @@ Func _YDTool_GetHostName($_sIP)
             If IsObj($colItems) Then
                 For $objItem In $colItems
                     If $objItem.SystemName <> "" Then
-                        $sReturn = $objItem.SystemName
+                        $sHostNameReturn = $objItem.SystemName
                     EndIf
                 Next
             Endif
         EndIf
     EndIf
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+    _YDLogger_Var("$sHostNameReturn", $sHostNameReturn, $sFuncName)
+    Return $sHostNameReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GetHostLoggedUserName
 ; Description ...: Recupere le nom de l'utilisateur connecte au PMF pour un Host donne
 ; Syntax.........: _YDTool_GetHostLoggedUserName($_sHost)
-; Parameters ....: $_sHost       - Nom du PMF ou IP
-; Return values .: Success      - $sReturn
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; Return values .: Success      - $sHostLoggedUserNameReturn
 ;                  Failure      - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_GetHostLoggedUserName($_sHost)
     Local $sFuncName = "_YDTool_GetHostLoggedUserName"
     _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
-    Local $sReturn = ""
+    Local $sHostLoggedUserNameReturn = ""
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
@@ -714,32 +823,32 @@ Func _YDTool_GetHostLoggedUserName($_sHost)
             If IsObj($colItems) Then
                 For $objItem In $colItems
                     If $objItem.userName <> "" Then
-                        $sReturn = $objItem.userName
+                        $sHostLoggedUserNameReturn = $objItem.userName
                     EndIf
                 Next
             Endif
         EndIf
     EndIf
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+    _YDLogger_Var("$sHostLoggedUserNameReturn", $sHostLoggedUserNameReturn, $sFuncName)
+    Return $sHostLoggedUserNameReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GetHostMacAddress
 ; Description ...: Recupere l'adresse MAC du Host donne
 ; Syntax.........: _YDTool_GetHostMacAddress($_sHost)
-; Parameters ....: $_sHost       - Nom du PMF ou IP
-; Return values .: Success      - $sReturn
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; Return values .: Success      - $sHostMacReturn
 ;                  Failure      - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_GetHostMacAddress($_sHost)
     Local $sFuncName = "_YDTool_GetHostMacAddress"
     _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
-    Local $sReturn = ""
+    Local $sHostMacReturn = ""
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
@@ -747,100 +856,119 @@ Func _YDTool_GetHostMacAddress($_sHost)
             If IsObj($colItems) Then
                 For $objItem In $colItems
                     If $objItem.MACAddress <> "" Then
-                        $sReturn = $objItem.MACAddress
+                        $sHostMacReturn = $objItem.MACAddress
                     EndIf
                 Next
             Endif
         EndIf
     EndIf
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+    _YDLogger_Var("$sHostMacReturn", $sHostMacReturn, $sFuncName)
+    Return $sHostMacReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GetHostIpAddress
 ; Description ...: Recupere l'adresse IP du Host donne
 ; Syntax.........: _YDTool_GetHostIpAddress($_sHost)
-; Parameters ....: $_sHost       - Nom du PMF ou IP
-; Return values .: Success      - $sReturn
+; Parameters ....: $_sHost		- Nom du PMF ou IP
+; Return values .: Success      - $sHostIpReturn
 ;                  Failure      - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_GetHostIpAddress($_sHost)
     Local $sFuncName = "_YDTool_GetHostIpAddress"
     _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
-    Local $sReturn = ""
-    If _YDTool_IsPing($_sHost) Then
-        Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
-        If Not @error Then
-            Local $colItems = $objWMIService.ExecQuery("SELECT IPAddress FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", "WQL", 0x30)
-            If IsObj($colItems) Then
-                For $objItem In $colItems
-                    If $objItem.IPAddress(0) <> "" Then
-                        $sReturn = $objItem.IPAddress(0)
-                    EndIf
-                Next
-            Endif
-        EndIf
-    EndIf
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+    Local $sHostIpReturn = ""
+	Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
+	If Not @error Then
+		Local $colItems = $objWMIService.ExecQuery("SELECT IPAddress FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", "WQL", 0x30)
+		If IsObj($colItems) Then
+			For $objItem In $colItems
+				If $objItem.IPAddress(0) <> "" Then
+					$sHostIpReturn = $objItem.IPAddress(0)
+				EndIf
+			Next
+		Endif
+	Else
+		_YDLogger_Log("Impossible d'initialiser l'object $objWMIService", $sFuncName)
+		_YDLogger_Log("Tentative de recherche de l'IP par ping ...", $sFuncName)
+;~ 		Local $iPID = Run(@ComSpec & " /c nslookup " & $_sHost, "", @SW_HIDE, $STDERR_CHILD + $STDOUT_CHILD)
+		Local $iPID = Run(@ComSpec & " /c ping -n 1 " & $_sHost, "", @SW_HIDE, $STDERR_CHILD + $STDOUT_CHILD)
+		Local $sOutput=""
+		Local $aIPs=""
+		While 1
+			$sOutput &= StdoutRead($iPID)
+			If @error Then ; On sort de la boucle si le process se ferme ou si StdoutRead retourne une erreur
+				ExitLoop
+			EndIf
+		WEnd
+;~ 		$aIPs=StringRegExp($sOutput,'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b',3)
+		$aIPs=StringRegExp($sOutput,'\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]',3)
+		$sHostIpReturn = $aIPs[UBound($aIPs) - 1]
+	EndIf
+	_YDLogger_Var("$sHostIpReturn", $sHostIpReturn, $sFuncName)
+	If $sHostIpReturn = "" Then
+		_YDLogger_Error("Impossible de determiner l'adresse IP du host : " & $_sHost, $sFuncName)
+	EndIf
+    Return $sHostIpReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GetHostSite
 ; Description ...: Recupere le site du Host donne
 ; Syntax.........: _YDTool_GetHostSite($_sHost)
-; Parameters ....: $_sHost       - Nom du PMF ou IP
-; Return values .: Success      - $sReturn
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; Return values .: Success      - $sHostSiteReturn
 ;                  Failure      - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_GetHostSite($_sHost)
     Local $sFuncName = "_YDTool_GetHostSite"
     _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
-    Local $sReturn = ""
+    Local $sHostSiteReturn = ""
 	Local $sIP = _YDTool_GetHostIpAddress($_sHost)
-    Switch $sIP
-		Case "55.123.4.1" To "55.123.6.255"
-			$sReturn = "ARRAS"
-		Case "55.126.8.1" To "55.126.12.255"
-			$sReturn = "BETHUNE"
-		Case "55.126.36.1" To "55.126.39.255"
-			$sReturn = "BRUAY"
-		Case "55.126.16.1" To "55.126.19.255"
-			$sReturn = "HENIN"
-		Case "55.126.4.1" To "55.126.7.255"
-			$sReturn = "LENS"
-		Case "55.126.28.1" To "55.126.31.255"
-			$sReturn = "LIEVIN"
-	EndSwitch
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+	_YDLogger_Var("$sIP", $sIP, $sFuncName, 2)
+	Local $aIP = StringSplit($sIP, ".")
+	Select
+		Case Int($aIP[1]) = 55 And Int($aIP[2]) = 123 And Int($aIP[3]) >= 4 And Int($aIP[3]) <= 6		; 55.123.4.1 => 55.123.6.255
+			$sHostSiteReturn = "ARRAS"		; 55.123.4.18 	=> \\W11620101AAF\
+		Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 8 And Int($aIP[3]) <= 12		; 55.126.8.1 => 55.126.12.255
+			$sHostSiteReturn = "BETHUNE" 	; 55.126.8.18 	=> \\W11620400ACF\
+		Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 36 And Int($aIP[3]) <= 39		; 55.126.36.1 => 55.126.39.255
+			$sHostSiteReturn = "BRUAY" 		; 55.126.36.10 	=> \\W11620101BRU\
+		Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 16 And Int($aIP[3]) <= 19		; 55.126.16.1 => 55.126.19.255
+			$sHostSiteReturn = "HENIN" 		; 55.126.16.12 	=> \\W11620400ADF\
+		Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 4 And Int($aIP[3]) <= 7		; 55.126.4.1 => 55.126.7.255
+			$sHostSiteReturn = "LENS"  		; 55.126.4.49 	=> \\W11620101ACF\
+		Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 28 And Int($aIP[3]) <= 31		; 55.126.28.1 => 55.126.31.255
+			$sHostSiteReturn = "LIEVIN" 	; 55.126.28.12 	=> \\W11620400AFF\
+	EndSelect
+    _YDLogger_Var("$sHostSiteReturn", $sHostSiteReturn, $sFuncName)
+    Return $sHostSiteReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GetHostIpSubnet
 ; Description ...: Recupere l'adresse IP de sous-reseau du Host donne
 ; Syntax.........: _YDTool_GetHostIpSubnet($_sHost)
-; Parameters ....: $_sHost       - Nom du PMF ou IP
-; Return values .: Success      - $sReturn
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; Return values .: Success      - $sHostIpSubnetReturn
 ;                  Failure      - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_GetHostIpSubnet($_sHost)
     Local $sFuncName = "_YDTool_GetHostIpSubnet"
     _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
-    Local $sReturn = ""
+    Local $sHostIpSubnetReturn = ""
     If _YDTool_IsPing($_sHost) Then
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
@@ -848,14 +976,169 @@ Func _YDTool_GetHostIpSubnet($_sHost)
             If IsObj($colItems) Then
                 For $objItem In $colItems
                     If $objItem.IPSubnet(0) <> "" Then
-                        $sReturn = $objItem.IPSubnet(0)
+                        $sHostIpSubnetReturn = $objItem.IPSubnet(0)
                     EndIf
                 Next
             Endif
         EndIf
     EndIf
-    _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+    _YDLogger_Var("$sHostIpSubnetReturn", $sHostIpSubnetReturn, $sFuncName)
+    Return $sHostIpSubnetReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetHostRegValue
+; Description ...: Recupere une valeur d'une clee de registre presente sur le Host
+; Syntax.........: _YDTool_GetHostRegValue($_sHost, $_iHkey, $_sRegKey, $_sRegName)
+; Parameters ....: $_sHost			- Nom du PMF ou IP
+;				   $_iHkey			- HKEY principal
+;				   $_sRegKey		- Clee ciblee
+;				   $_sRegVal		- Nom de la cle
+; Return values .: $sRegReturn      - Valeur de retour issue du registre
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 01/10/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetHostRegValue($_sHost, $_iHkey, $_sRegKey, $_sRegName)
+	Local $sFuncName = "_YDTool_GetHostRegValue"
+	_YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+	_YDLogger_Var("$_iHkey", $_iHkey, $sFuncName, 2)
+	_YDLogger_Var("$_sRegKey", $_sRegKey, $sFuncName, 2)
+	_YDLogger_Var("$_sRegName", $_sRegName, $sFuncName, 2)
+    Local $sHostRegReturn = ""
+	If _YDTool_IsPing($_sHost) Then
+		Local $objWMIService = ObjGet("winmgmts:{impersonationLevel=impersonate}!\\" & $_sHost & "\root\default:StdRegProv")
+		If Not @error Then
+			$objWMIService.GetStringValue($_iHkey, $_sRegKey, $_sRegName, $sHostRegReturn)
+			If $sHostRegReturn == "" Then
+				_YDLogger_Error("Cle de registre non trouvée : \\" & $_sHost & "\" & $_iHkey & "\" & $_sRegKey & "\" & $_sRegName, $sFuncName)
+			EndIf
+		Endif
+	EndIf
+	_YDLogger_Var("$sHostRegReturn", $sHostRegReturn, $sFuncName)
+    Return $sHostRegReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_IsHostAdminShare
+; Description ...: Verifie si un partage administratif est accessible
+; Syntax.........: _YDTool_IsHostAdminShare($_sHost, [$_sShareName])
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; 				   $_sShareName - Nom du partage administratif
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 01/10/2019
+; Remarks .......: Remplace _YDTool_IsAdminShare
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_IsHostAdminShare($_sHost, $_sShareName = "C$")
+    Local $sFuncName = "_YDTool_IsHostAdminShare"
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+	_YDLogger_Var("$_sShareName", $_sShareName, $sFuncName, 2)
+    Local $bHostAdminShareReturn = False
+	Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
+	If Not @error Then
+		Local $objWMIShare = $objWMIService.ExecQuery("SELECT * FROM Win32_Share")
+		If Not @error Then
+			For $objShare in $objWMIShare
+				If $objShare.Name = $_sShareName Then
+					$bHostAdminShareReturn = True
+				EndIf
+			Next
+		Else
+			_YDLogger_Error("Impossible d'initialiser l'object $objWMIShare", $sFuncName)
+		EndIf
+	Else
+		_YDLogger_Error("Impossible d'initialiser l'object $objWMIService", $sFuncName)
+	EndIf
+    _YDLogger_Var("$bHostAdminShareReturn", $bHostAdminShareReturn, $sFuncName)
+    Return $bHostAdminShareReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_CreateHostAdminShare
+; Description ...: Création d'un partage administratif
+; Syntax.........: _YDTool_CreateHostAdminShare($_sHost, [$_sSharePath, $_sShareName, $_sShareDesc])
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; 				   $_sSharePath - Chemin du partage administratif
+; 				   $_sShareName - Nom du partage administratif
+; 				   $_sShareDesc - Description du partage administratif
+; Return values .: Success      - $iWMIReturn
+;                  Failure      - ""
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 01/10/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_CreateHostAdminShare($_sHost, $_sSharePath = "C:\", $_sShareName = "C$", $_sShareDesc = "Partage par défaut")
+    Local $sFuncName = "_YDTool_CreateHostAdminShare"
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+	_YDLogger_Var("$_sSharePath", $_sSharePath, $sFuncName, 2)
+	_YDLogger_Var("$_sShareName", $_sShareName, $sFuncName, 2)
+	_YDLogger_Var("$_sShareDesc", $_sShareDesc, $sFuncName, 2)
+    Local $iWMIReturn = -1
+	Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
+	If Not @error Then
+		Local $objWMIShare = $objWMIService.Get("Win32_Share")
+		If Not @error Then
+			$iWMIReturn = $objWMIShare.Create($_sSharePath, $_sShareName, 0, True, $_sShareDesc)
+			If $iWMIReturn == 0 Then
+				_YDLogger_Log("Partage administratif cree : " & $_sShareName, $sFuncName)
+			Elseif $iWMIReturn == 22 Then
+				_YDLogger_Log("Partage administratif " & $_sShareName & " déjà existant", $sFuncName)
+			Else
+				_YDLogger_Log("Erreur lors de la creation du partage administratif " & $_sShareName & " : " & $iWMIReturn, $sFuncName)
+			EndIf
+		Else
+			_YDLogger_Error("Impossible d'initialiser l'object $objWMIShare", $sFuncName)
+		EndIf
+	Else
+		_YDLogger_Error("Impossible d'initialiser l'object $objWMIService", $sFuncName)
+	EndIf
+    _YDLogger_Var("$iWMIReturn", $iWMIReturn, $sFuncName)
+    Return $iWMIReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_DeleteHostAdminShare
+; Description ...: Suppression d'un partage administratif
+; Syntax.........: _YDTool_DeleteHostAdminShare($_sHost, [$_sShareName])
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; 				   $_sShareName - Nom du partage administratif
+; Return values .: Success      - $iWMIReturn
+;                  Failure      - ""
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 01/10/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_DeleteHostAdminShare($_sHost, $_sShareName = "C$")
+    Local $sFuncName = "_YDTool_DeleteHostAdminShare"
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+	_YDLogger_Var("$_sShareName", $_sShareName, $sFuncName, 2)
+    Local $iWMIReturn = -1
+	Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
+	If Not @error Then
+		Local $objWMIShare = $objWMIService.ExecQuery('SELECT * FROM Win32_Share Where Name="' & $_sShareName & '"')
+		If Not @error Then
+			For $objShare in $objWMIShare
+				$iWMIReturn = $objShare.Delete
+				If Not @error Then
+					_YDLogger_Log("Partage administratif supprime : " & $_sShareName, $sFuncName)
+				Else
+					_YDLogger_Error("Impossible de supprimer le partage administratif : " & $objShare.Name, $sFuncName)
+				EndIf
+			Next
+		Else
+			_YDLogger_Error("Impossible d'initialiser l'object $objWMIShare", $sFuncName)
+		EndIf
+	Else
+		_YDLogger_Error("Impossible d'initialiser l'object $objWMIService", $sFuncName)
+	EndIf
+    _YDLogger_Var("$iWMIReturn", $iWMIReturn, $sFuncName)
+    Return $iWMIReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -944,7 +1227,7 @@ Func _YDTool_GUIShowAbout()
     GUICtrlCreateLabel(_YDGVars_Get("sAppName"), 0, 0, $iAboutWidth, -1, BitOr($SS_CENTER,$BS_CENTER))
     ; Description + version
     GUISetFont(9, $iAboutWidth, 0, $font)
-    GUICtrlCreateLabel(_YDGVars_Get("sAppName"), 0, 40, $iAboutWidth, -1, BitOr($SS_CENTER,$BS_CENTER))
+    GUICtrlCreateLabel(_YDGVars_Get("sAppDesc"), 0, 40, $iAboutWidth, -1, BitOr($SS_CENTER,$BS_CENTER))
     GUICtrlCreateLabel(_YDGVars_Get("sAppVersionV"), 0, 80, $iAboutWidth, -1, BitOr($SS_CENTER,$BS_CENTER))
 	Local $idLinkContact = GUICtrlCreateLabel(_YDGVars_Get("sAppContact"), 0, 120, $iAboutWidth, -1, BitOr($SS_CENTER,$BS_CENTER))
 	GUICtrlSetColor(-1, 0x0000FF)
@@ -1052,30 +1335,30 @@ EndFunc
 ; Name...........: _YDTool_GetDefaultPrinter
 ; Description ...: Recupere le nom de l'imprimante par defaut
 ; Syntax.........: _YDTool_GetDefaultPrinter($_sHost)
-; Parameters ....: $_sHost       - Nom du PMF ou IP
-; Return values .: Success      - $sReturn
+; Parameters ....: $_sHost      - Nom du PMF ou IP
+; Return values .: Success      - $sDefaultPrinterReturn
 ;                  Failure      - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......: 30/04/2019
+; Modified.......: 01/10/2019
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
 Func _YDTool_GetDefaultPrinter($_sHost)
 	Local $sFuncName = "_YDTool_GetDefaultPrinter"
 	_YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
-	Local $sReturn = ""
+	Local $sDefaultPrinterReturn = ""
     Local $objWMIService = ObjGet("winmgmts:\\" & $_sHost & "\root\CIMV2")
 	Local $colItems = $objWMIService.ExecQuery("SELECT * FROM Win32_Printer", "WQL", 0x10 + 0x20)
 	If IsObj($colItems) then
 	   For $objItem In $colItems
 			;_YDLogger_Var("$objItem.DeviceID", $objItem.DeviceID, $sFuncName)
 			If  $objitem.Default <> 0 Then
-				$sReturn = $objItem.DeviceID
+				$sDefaultPrinterReturn = $objItem.DeviceID
 			Endif
 		Next
 	Endif
-	_YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+	_YDLogger_Var("$sDefaultPrinterReturn", $sDefaultPrinterReturn, $sFuncName)
+    Return $sDefaultPrinterReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -1117,17 +1400,17 @@ EndFunc
 ; ===============================================================================================================================
 Func _YDTool_GetAppConfValue($_sIniSection, $_sIniKey)
 	Local $sFuncName = "_YDTool_GetAppConfValue"
-	Local $sReturn = ""
+	Local $sAppConfValueReturn = ""
 	If Not FileExists(_YDGVars_Get("sAppConfFile")) Then
 		_YDLogger_Error("Fichier introuvable : " & _YDGVars_Get("sAppConfFile"))
 	Else
-		$sReturn = IniRead(_YDGVars_Get("sAppConfFile"), $_sIniSection, $_sIniKey, "")
+		$sAppConfValueReturn = IniRead(_YDGVars_Get("sAppConfFile"), $_sIniSection, $_sIniKey, "")
 		If @error Then
 			_YDLogger_Error("Lecture impossible du fichier : " & _YDGVars_Get("sAppConfFile"))
 		EndIf
 	EndIf
-	_YDLogger_Var("$sReturn", $sReturn, $sFuncName)
-    Return $sReturn
+	_YDLogger_Var("$sAppConfValueReturn", $sAppConfValueReturn, $sFuncName)
+    Return $sAppConfValueReturn
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -1156,9 +1439,42 @@ Func _YDTool_GetAppConfSection($_sIniSection)
     Return $aReturn
 EndFunc
 
-
-
-
-
-
-
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_SuspendProcessSwitch
+; Description ...: Suspend/reactive l'execution d'un process
+; Syntax.........: _YDTool_SuspendProcessSwitch("LNGP.exe", True)
+; Parameters ....: $_iPIDOrName	    - PID ou nom du process
+;                  $_bSuspend	    - True pour suspension / False pour reactivation
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 09/12/2019
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_SuspendProcessSwitch($_iPIDOrName, $_bSuspend = True)
+	Local $sFuncName = "_YDTool_SuspendProcessSwitch"
+	Local $bReturn = False
+    Local $iSucess = 0
+    Local $iPID = 0
+	_YDLogger_Var("$_bSuspend", $_bSuspend, $sFuncName, 2)
+    If IsString($_iPIDOrName) Then
+		$iPID = ProcessExists($_iPIDOrName)
+	EndIf
+    If Not $iPID Then
+		_YDLogger_Error("Process non trouve : " & $_iPIDOrName, $sFuncName)
+		Return $bReturn
+	EndIf
+    Local $ai_Handle = DllCall("kernel32.dll", 'int', 'OpenProcess', 'int', 0x1f0fff, 'int', False, 'int', $iPID)
+    If $_bSuspend Then
+		_YDLogger_Log("Suspension du process : " & $iPID, $sFuncName)
+        $iSucess = DllCall("ntdll.dll", "int", "NtSuspendProcess", "int", $ai_Handle[0])
+    Else
+		_YDLogger_Log("Reactivation du process : " & $iPID, $sFuncName)
+        $iSucess = DllCall("ntdll.dll", "int", "NtResumeProcess", "int", $ai_Handle[0])
+    EndIf
+    DllCall('kernel32.dll', 'ptr', 'CloseHandle', 'ptr', $ai_Handle)
+    If IsArray($iSucess) Then $bReturn = True
+	_YDLogger_Var("$bReturn", $bReturn, $sFuncName, 2)
+	Return $bReturn
+EndFunc
