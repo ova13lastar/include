@@ -39,8 +39,7 @@ Global $__g_bLogInit        = False
 ; Name...........: _YDLogger_Init
 ; Description ...: Initialise le fichier de log
 ; Syntax.........: _YDLogger_Init([$_sLogPath], [$_sLogType])
-; Parameters ....: $_oAppVars   - Objet dictionnaire contenant les variables globales issues de l'application appelante
-;                  $_sLogPath   - Path du fichier log
+; Parameters ....: $_sLogPath   - Path du fichier log
 ;                  $_sLogType   - console | file | both
 ; Return values .: Success      - True
 ;                  Failure      - False
