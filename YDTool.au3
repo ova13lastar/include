@@ -599,6 +599,34 @@ Func _YDTool_DeleteFileIfExist($_sFullPath)
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_MoveFile
+; Description ...: Déplacement d'un fichier - surcouche de FileMove()
+; Syntax.........: _YDTool_MoveFile($_sSourceFullPath, $_sDestinationFullPath, [$_iOption])
+; Parameters ....: $_sSourcePath         - Chemin du fichier source
+;                  $_sDestinationPath    - Chemin du fichier de destination
+;                  $_iOption             - Options pour le déplacement du fichier
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......:
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_MoveFile($_sSourceFullPath, $_sDestinationFullPath, $_iOption = $FC_OVERWRITE + $FC_CREATEPATH)
+    Local $sFuncName = "_YDTool_MoveFile"
+    _YDLogger_Var("$_sSourcePath", $_sSourceFullPath, $sFuncName, 2)
+    _YDLogger_Var("$_sDestinationPath", $_sDestinationFullPath, $sFuncName, 2)
+    _YDLogger_Var("$_iOption", $_iOption, $sFuncName, 2)
+    If FileMove($_sSourceFullPath, $_sDestinationFullPath, $_iOption) = 0 Then
+        _YDLogger_Error("Déplacement du fichier impossible : " & $_sDestinationFullPath, $sFuncName)
+        Return False
+    Else
+        _YDLogger_Log("Déplacement du fichier OK : " & $_sDestinationFullPath, $sFuncName)
+        Return True
+    EndIf
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_CopyFile
 ; Description ...: Copie d'un fichier - surcouche de FileCopy()
 ; Syntax.........: _YDTool_CopyFile($_sSourceFullPath, $_sDestinationFullPath, [$_iOption])
@@ -1252,6 +1280,59 @@ Func _YDTool_GUIShowAbout()
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetFileRow
+; Description ...: Renvoi une ligne contenue dans un fichier a plat
+; Syntax.........: _YDTool_GetFileRow($_sFilePath, $_iRow = 1)
+; Parameters ....: $_sFilePath  - Chemin du fichier à vérifier
+;                  $_iRow       - Ligne a ramener
+; Return values .: $sRow        - Contenu de la ligne
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 13/01/2020
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetFileRow($_sFilePath, $_iRow = 1)
+    Local $sFuncName = "_YDTool_GetFileRow"
+    Local $hFile = FileOpen($_sFilePath, $FO_READ)
+    If $hFile = -1 Then
+        _YDTool_SetMsgBoxError("Le fichier " & $_sFilePath & " ne peut pas etre lu !", $sFuncName)
+        Return
+    EndIf
+    Local $sRow = FileReadLine($hFile, $_iRow)
+    FileClose($hFile)
+    Return $sRow
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_WaitUntilFileIsReady
+; Description ...: Verifie si une fenetre clignotante est présent pour le handle passe en parametre
+; Syntax.........: _YDTool_WaitUntilFileIsReady($_sFilePath)
+; Parameters ....: $_sFilePath  - Chemin du fichier à vérifier
+;                  $_iSleepTime - Duree d'attente (en ms)
+; Return values .: True
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 13/01/2020
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_WaitUntilFileIsReady($_sFilePath, $_iSleepTime = 5000)
+    Local $sFuncName = "_YDTool_WaitUntilFileIsReady"
+    Local $hFile
+    Local $bFileOk = False
+    For $i = 1 To $_iSleepTime/10
+        $hFile = FileOpen($_sFilePath)
+        If $hFile <> -1 Then
+            FileClose($hFile)
+            $bFileOk = True
+            ExitLoop
+        EndIf
+        Sleep(10)
+    Next
+    _YDLogger_Var("bFileOk", $bFileOk, $sFuncName)
+    Return True
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_WinIsFlash
 ; Description ...: Verifie si une fenetre clignotante est présent pour le handle passe en parametre
 ; Syntax.........: _YDTool_WinIsFlash($_hWnd)
@@ -1391,8 +1472,8 @@ EndFunc
 ; Syntax.........: _YDTool_GetAppConfValue($_sIniSection, $_sIniKey)
 ; Parameters ....: $_sIniSection	- Nom de la section
 ; 				   $_sIniKey		- Nom de la cle
-; Return values .: Success      - $sReturn
-;                  Failure      - ""
+; Return values .: Success          - $sReturn
+;                  Failure          - ""
 ; Author ........: yann.daniel@assurance-maladie.fr
 ; Modified.......: 30/04/2019
 ; Remarks .......:
@@ -1440,6 +1521,37 @@ Func _YDTool_GetAppConfSection($_sIniSection)
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_SetAppConfValue
+; Description ...: Modifie la valeur d une cle dans le fichier de config.ini
+; Syntax.........: _YDTool_SetAppConfValue($_sIniSection, $_sIniKey, $_sValue)
+; Parameters ....: $_sIniSection	- Nom de la section
+; 				   $_sIniKey		- Nom de la cle
+; 				   $_sValue		    - Nouvelle valeur
+; Return values .: Success          - $sReturn
+;                  Failure          - ""
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 23/09/2020
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_SetAppConfValue($_sIniSection, $_sIniKey, $_sValue)
+    Local $sFuncName = "_YDTool_SetAppConfValue"
+    Local $iReturn = 0
+    If Not FileExists(_YDGVars_Get("sAppConfFile")) Then
+        _YDLogger_Error("Fichier introuvable : " & _YDGVars_Get("sAppConfFile"))
+    ElseIf Not _YDTool_GetAppConfValue($_sIniSection, $_sIniKey) Then
+        _YDLogger_Error("Cle introuvable : " & $_sIniKey & " dans la section " & $_sIniSection)
+    Else
+        $iReturn = IniWrite(_YDGVars_Get("sAppConfFile"), $_sIniSection, $_sIniKey, $_sValue)
+        If @error Then
+            _YDLogger_Error("Ecriture impossible de la cle " &  $_sIniKey & " du fichier : " & _YDGVars_Get("sAppConfFile"))
+        EndIf
+    EndIf
+    _YDLogger_Var("$iReturn", $iReturn, $sFuncName)
+    Return $iReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_SuspendProcessSwitch
 ; Description ...: Suspend/reactive l'execution d'un process
 ; Syntax.........: _YDTool_SuspendProcessSwitch("LNGP.exe", True)
@@ -1477,4 +1589,27 @@ Func _YDTool_SuspendProcessSwitch($_iPIDOrName, $_bSuspend = True)
     If IsArray($iSucess) Then $bReturn = True
     _YDLogger_Var("$bReturn", $bReturn, $sFuncName, 2)
     Return $bReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_ConvertDateFrToYYYYMMDD
+; Description ...: Convertit une date francaise (JJ/MM/AAAA) au format AAAAMMJJ
+; Syntax.........: _YDTool_ConvertDateFrToYYYYMMDD('12/04/2020')
+; Parameters ....: $_sDate	    - Date à convertir
+; Return values .: Date au format AAAAMMJJ
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 21/01/2020
+; Remarks .......:
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_ConvertDateFrToYYYYMMDD($_sDate)
+    Local $sFuncName = "_YDTool_ConvertDateFrToYYYYMMDD"
+    Local $sReturn = "19000101"
+    _YDLogger_Var("$_sDate", $_sDate, $sFuncName, 2)
+    Local $aDate = StringSplit($_sDate, "/")
+    If $adate[0] > 0 Then
+        $sReturn = $aDate[3] & $aDate[2] & $aDate[1]
+    EndIf
+    _YDLogger_Var("$sReturn", $sReturn, $sFuncName, 2)
+    Return $sReturn
 EndFunc
