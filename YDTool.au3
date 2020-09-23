@@ -960,26 +960,42 @@ Func _YDTool_GetHostSite($_sHost)
     Local $sFuncName = "_YDTool_GetHostSite"
     _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
     Local $sHostSiteReturn = ""
-    Local $sIP = _YDTool_GetHostIpAddress($_sHost)
-    _YDLogger_Var("$sIP", $sIP, $sFuncName, 2)
-    Local $aIP = StringSplit($sIP, ".")
     Select
-        Case Int($aIP[1]) = 55 And Int($aIP[2]) = 123 And Int($aIP[3]) >= 4 And Int($aIP[3]) <= 6		; 55.123.4.1 => 55.123.6.255
+        Case StringMid($_sHost, 12, 1) = "A"
             $sHostSiteReturn = "ARRAS"		; 55.123.4.18 	=> \\W11620101AAF\
-        Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 8 And Int($aIP[3]) <= 12		; 55.126.8.1 => 55.126.12.255
+        Case StringMid($_sHost, 12, 1) = "E"
             $sHostSiteReturn = "BETHUNE" 	; 55.126.8.18 	=> \\W11620400ACF\
-        Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 36 And Int($aIP[3]) <= 39		; 55.126.36.1 => 55.126.39.255
+        Case StringMid($_sHost, 12, 1) = "R"
             $sHostSiteReturn = "BRUAY" 		; 55.126.36.10 	=> \\W11620101BRU\
-        Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 16 And Int($aIP[3]) <= 19		; 55.126.16.1 => 55.126.19.255
+        Case StringMid($_sHost, 12, 1) = "N"
             $sHostSiteReturn = "HENIN" 		; 55.126.16.12 	=> \\W11620400ADF\
-        Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 4 And Int($aIP[3]) <= 7		; 55.126.4.1 => 55.126.7.255
+        Case StringMid($_sHost, 12, 1) = "L"
             $sHostSiteReturn = "LENS"  		; 55.126.4.49 	=> \\W11620101ACF\
-        Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 28 And Int($aIP[3]) <= 31		; 55.126.28.1 => 55.126.31.255
+        Case StringMid($_sHost, 12, 1) = "V"
             $sHostSiteReturn = "LIEVIN" 	; 55.126.28.12 	=> \\W11620400AFF\
     EndSelect
+    ;~ ; Ancienne methode avec les adresses IP
+    ;~ Local $sIP = _YDTool_GetHostIpAddress($_sHost)
+    ;~ _YDLogger_Var("$sIP", $sIP, $sFuncName, 2)
+    ;~ Local $aIP = StringSplit($sIP, ".")
+    ;~ Select
+    ;~     Case Int($aIP[1]) = 55 And Int($aIP[2]) = 123 And Int($aIP[3]) >= 4 And Int($aIP[3]) <= 6		; 55.123.4.1 => 55.123.6.255
+    ;~         $sHostSiteReturn = "ARRAS"		; 55.123.4.18 	=> \\W11620101AAF\
+    ;~     Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 8 And Int($aIP[3]) <= 12		; 55.126.8.1 => 55.126.12.255
+    ;~         $sHostSiteReturn = "BETHUNE" 	; 55.126.8.18 	=> \\W11620400ACF\
+    ;~     Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 36 And Int($aIP[3]) <= 39		; 55.126.36.1 => 55.126.39.255
+    ;~         $sHostSiteReturn = "BRUAY" 		; 55.126.36.10 	=> \\W11620101BRU\
+    ;~     Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 16 And Int($aIP[3]) <= 19		; 55.126.16.1 => 55.126.19.255
+    ;~         $sHostSiteReturn = "HENIN" 		; 55.126.16.12 	=> \\W11620400ADF\
+    ;~     Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 4 And Int($aIP[3]) <= 7		; 55.126.4.1 => 55.126.7.255
+    ;~         $sHostSiteReturn = "LENS"  		; 55.126.4.49 	=> \\W11620101ACF\
+    ;~     Case Int($aIP[1]) = 55 And Int($aIP[2]) = 126 And Int($aIP[3]) >= 28 And Int($aIP[3]) <= 31		; 55.126.28.1 => 55.126.31.255
+    ;~         $sHostSiteReturn = "LIEVIN" 	; 55.126.28.12 	=> \\W11620400AFF\
+    ;~ EndSelect
     _YDLogger_Var("$sHostSiteReturn", $sHostSiteReturn, $sFuncName)
     Return $sHostSiteReturn
 EndFunc
+
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDTool_GetHostIpSubnet
