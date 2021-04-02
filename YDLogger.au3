@@ -156,17 +156,20 @@ EndFunc
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _YDLogger_Sep
 ; Description ...: Ecrit un separateur dans une ligne de log
-; Syntax.........: _YDLogger_Sep([$_iSepNumber], [$_sSepCar])
+; Syntax.........: _YDLogger_Sep([$_iSepNumber], [$_sSepCar], [$_iLogLevel])
 ; Parameters ....: $_iSepNumber  - Nombre de caractère du séparateur
 ;                  $_sSepCar     - Caractère du séparateur
 ; Return values .: Success      - True
 ;                  Failure      - 0
 ; Author ........: yann.daniel@assurance-maladie.fr
-; Modified.......:
+; Modified.......: 24/03/2021
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
-Func _YDLogger_Sep($_iSepNumber = $YDLOGGER_SEP_NUMBER, $_sSepCar = $YDLOGGER_SEP_CAR)
+Func _YDLogger_Sep($_iSepNumber = $YDLOGGER_SEP_NUMBER, $_sSepCar = $YDLOGGER_SEP_CAR, $_iLogLevel = _YDGVars_Get("sLogLevel"))
+    ; On ne loggue que si demande
+    If $_iLogLevel > _YDGVars_Get("sLogLevel") Then Return False
+    ; On logge
     Local $sSep = ""
     For $i = 1 To $_iSepNumber Step +1
         $sSep = $sSep & $_sSepCar
