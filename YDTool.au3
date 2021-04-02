@@ -23,6 +23,8 @@
 #include <Misc.au3>
 #include <Array.au3>
 #include <Date.au3>
+#include <WinNet.au3>
+#include <WinAPIShellEx.au3>
 ; ===============================================================================================================================
 
 ; #VARIABLES# ===================================================================================================================
@@ -169,7 +171,7 @@ Func _YDTool_IsServiceRunning($_sHost, $_sServiceName, $_sFilterKey = "", $_sFil
             EndIf
              _YDLogger_Var("$sQuery", $sQuery, $sFuncName)
             Local $colItems = $objWMIService.ExecQuery($sQuery, "WQL", 0x30)
-            If IsObj($colItems) Then
+            If IsObj($colItems) = 1 Then
                 For $objItem In $colItems
                     If $objItem.State = "Running" Then
                         $bReturn = True
@@ -205,7 +207,7 @@ Func _YDTool_IsProcessRunning($_sHost, $_sProcessName, $_sPathItem = "")
         Local $oWMI = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
             Local $oProcessList = $oWMI.ExecQuery ("SELECT * FROM Win32_Process Where Name = '" & $_sProcessName & "'", "WQL", 0x30)
-            If IsObj($oProcessList) Then
+            If IsObj($oProcessList) = 1 Then
                 For $sProcess in $oProcessList
                     _YDLogger_Var("$sProcess.Name", $sProcess.Name, $sFuncName, 2)
                     _YDLogger_Var("$sProcess.ExecutablePath", $sProcess.ExecutablePath, $sFuncName, 2)
@@ -815,7 +817,7 @@ Func _YDTool_GetHostName($_sIP)
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sIP & "\root\cimv2")
         If Not @error Then
             Local $colItems = $objWMIService.ExecQuery("SELECT SystemName FROM Win32_NetworkAdapter WHERE NetConnectionStatus=2", "WQL", 0x30)
-            If IsObj($colItems) Then
+            If IsObj($colItems) = 1 Then
                 For $objItem In $colItems
                     If $objItem.SystemName <> "" Then
                         $sHostNameReturn = $objItem.SystemName
@@ -848,10 +850,10 @@ Func _YDTool_GetHostLoggedUserName($_sHost)
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
             Local $colItems = $objWMIService.ExecQuery("SELECT userName FROM Win32_ComputerSystem", "WQL", 0x30)
-            If IsObj($colItems) Then
+            If IsObj($colItems) = 1 Then
                 For $objItem In $colItems
                     If $objItem.userName <> "" Then
-                        $sHostLoggedUserNameReturn = $objItem.userName
+                        $sHostLoggedUserNameReturn = StringReplace($objItem.userName, "CNAMTS\", "")
                     EndIf
                 Next
             Endif
@@ -881,7 +883,7 @@ Func _YDTool_GetHostMacAddress($_sHost)
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
             Local $colItems = $objWMIService.ExecQuery("SELECT MACAddress FROM Win32_NetworkAdapter WHERE NetConnectionStatus=2", "WQL", 0x30)
-            If IsObj($colItems) Then
+            If IsObj($colItems) = 1 Then
                 For $objItem In $colItems
                     If $objItem.MACAddress <> "" Then
                         $sHostMacReturn = $objItem.MACAddress
@@ -913,7 +915,7 @@ Func _YDTool_GetHostIpAddress($_sHost)
     Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
     If Not @error Then
         Local $colItems = $objWMIService.ExecQuery("SELECT IPAddress FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", "WQL", 0x30)
-        If IsObj($colItems) Then
+        If IsObj($colItems) = 1 Then
             For $objItem In $colItems
                 If $objItem.IPAddress(0) <> "" Then
                     $sHostIpReturn = $objItem.IPAddress(0)
@@ -1017,7 +1019,7 @@ Func _YDTool_GetHostIpSubnet($_sHost)
         Local $objWMIService = ObjGet("winmgmts:{impersonationLevel = impersonate}!\\" & $_sHost & "\root\cimv2")
         If Not @error Then
             Local $colItems = $objWMIService.ExecQuery("SELECT IPSubnet FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=True", "WQL", 0x30)
-            If IsObj($colItems) Then
+            If IsObj($colItems) = 1 Then
                 For $objItem In $colItems
                     If $objItem.IPSubnet(0) <> "" Then
                         $sHostIpSubnetReturn = $objItem.IPSubnet(0)
@@ -1446,7 +1448,7 @@ Func _YDTool_GetDefaultPrinter($_sHost)
     Local $sDefaultPrinterReturn = ""
     Local $objWMIService = ObjGet("winmgmts:\\" & $_sHost & "\root\CIMV2")
     Local $colItems = $objWMIService.ExecQuery("SELECT * FROM Win32_Printer", "WQL", 0x10 + 0x20)
-    If IsObj($colItems) then
+    If IsObj($colItems) = 1 then
        For $objItem In $colItems
             ;_YDLogger_Var("$objItem.DeviceID", $objItem.DeviceID, $sFuncName)
             If  $objitem.Default <> 0 Then
@@ -1495,15 +1497,15 @@ EndFunc
 ; Remarks .......:
 ; Related .......:
 ; ===============================================================================================================================
-Func _YDTool_GetAppConfValue($_sIniSection, $_sIniKey)
+Func _YDTool_GetAppConfValue($_sIniSection, $_sIniKey, $_sFilePath = _YDGVars_Get("sAppConfFile"))
     Local $sFuncName = "_YDTool_GetAppConfValue"
     Local $sAppConfValueReturn = ""
-    If Not FileExists(_YDGVars_Get("sAppConfFile")) Then
-        _YDLogger_Error("Fichier introuvable : " & _YDGVars_Get("sAppConfFile"))
+    If Not FileExists($_sFilePath) Then
+        _YDLogger_Error("Fichier introuvable : " & $_sFilePath)
     Else
-        $sAppConfValueReturn = IniRead(_YDGVars_Get("sAppConfFile"), $_sIniSection, $_sIniKey, "")
+        $sAppConfValueReturn = IniRead($_sFilePath, $_sIniSection, $_sIniKey, "")
         If @error Then
-            _YDLogger_Error("Lecture impossible du fichier : " & _YDGVars_Get("sAppConfFile"))
+            _YDLogger_Error("Lecture impossible du fichier : " & $_sFilePath)
         EndIf
     EndIf
     _YDLogger_Var("$sAppConfValueReturn", $sAppConfValueReturn, $sFuncName)
@@ -1532,7 +1534,7 @@ Func _YDTool_GetAppConfSection($_sIniSection)
             _YDLogger_Error("Lecture impossible du fichier : " & _YDGVars_Get("sAppConfFile"))
         EndIf
     EndIf
-    _YDLogger_Var("$aReturn", $aReturn, $sFuncName)
+    _YDLogger_Var("Section : " & $_sIniSection, $aReturn[0][0], $sFuncName)
     Return $aReturn
 EndFunc
 
@@ -1628,4 +1630,182 @@ Func _YDTool_ConvertDateFrToYYYYMMDD($_sDate)
     EndIf
     _YDLogger_Var("$sReturn", $sReturn, $sFuncName, 2)
     Return $sReturn
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetNetworkConnections
+; Description ...: Renvoi toutes les connexions reseaux d un Host donne
+; Syntax.........: _YDTool_GetNetworkConnections([$_sHost])
+; Parameters ....: $_sHost	    - Nom du PMF ou IP ('.' = PMF local)
+; Return values .: Objet contenant les informations
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 22/03/2021
+; Remarks .......: 
+    ;~ Local $oNetworkConnection
+    ;~ For $oNetworkConnection In $oNetworkConnections
+        ;~ _YDLogger_Var("Name", $oNetworkConnection.Name)
+        ;~ _YDLogger_Var("ConnectionState", $oNetworkConnection.ConnectionState)
+        ;~ _YDLogger_Var("ConnectionType", $oNetworkConnection.ConnectionType)
+        ;~ _YDLogger_Var("LocalName", $oNetworkConnection.LocalName)
+        ;~ _YDLogger_Var("RemotePath", $oNetworkConnection.RemotePath)
+    ;~ Next
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetNetworkConnections($_sHost = '.')
+	Local $sFuncName = "_YDTool_GetNetworkConnections"
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    Local $objWMIService = ObjGet("winmgmts:{impersonationLevel=impersonate}!\\" & $_sHost & "\root\cimv2")
+    If Not @error Then
+        Local $oNetworkConnections = $objWMIService.ExecQuery("SELECT * from Win32_NetworkConnection")
+        If IsObj($oNetworkConnections) = 1 Then            
+            For $oNetworkConnection In $oNetworkConnections
+                _YDLogger_Sep(50,'-',2)
+                _YDLogger_Var("Name", $oNetworkConnection.Name, $sFuncName, 2)
+                _YDLogger_Var("ConnectionState", $oNetworkConnection.ConnectionState, $sFuncName, 2)
+                _YDLogger_Var("ConnectionType", $oNetworkConnection.ConnectionType, $sFuncName, 2)
+                _YDLogger_Var("LocalName", $oNetworkConnection.LocalName, $sFuncName, 2)
+                _YDLogger_Var("RemotePath", $oNetworkConnection.RemotePath, $sFuncName, 2)
+            Next
+            return $oNetworkConnections
+        Else
+            _YDLogger_Error("$oNetworkConnections n'est pas un objet valide", $sFuncName)
+            Return false
+        EndIf
+    Else
+        _YDLogger_Error("Impossible d'initialiser l'object $objWMIService", $sFuncName)
+        Return false
+    EndIf
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_GetNetworkConnectionInfoByLetter
+; Description ...: Renvoi toutes les infos d'une connexion reseau via sa lettre
+; Syntax.........: _YDTool_GetNetworkConnectionInfoByLetter($_sLetter, [$_sHost])
+; Parameters ....: $_sLetter	- Lettre reseau au format "R:"
+;                  $_sHost	    - Nom du PMF ou IP ('.' = PMF local)
+; Return values .: Objet contenant les informations
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 22/03/2021
+; Remarks .......: 
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_GetNetworkConnectionInfoByLetter($_sLetter, $_sHost = '.')
+	Local $sFuncName = "_YDTool_GetNetworkConnectionInfoByLetter"
+    _YDLogger_Var("$_sLetter", $_sLetter, $sFuncName, 2)
+    _YDLogger_Var("$_sHost", $_sHost, $sFuncName, 2)
+    ; On se connecte au WMI
+    Local $objWMIService = ObjGet("winmgmts:{impersonationLevel=impersonate}!\\" & $_sHost & "\root\cimv2")
+    ; ---------------------------------------
+    ; Si erreur => On sort
+    If @error Then
+        _YDLogger_Error("Impossible d'initialiser l'object $objWMIService", $sFuncName)
+        Return False
+    Endif
+    ; ---------------------------------------
+    ; On lance la requete
+    Local $oNetworkConnection = $objWMIService.ExecQuery('SELECT * from Win32_NetworkConnection Where LocalName="' & $_sLetter & '"')
+    ; ---------------------------------------
+    ; Si objet vide => On sort
+    If $oNetworkConnection.Count = 0 Then
+        _YDLogger_Log("Lecteur " & $_sLetter & " absent", $sFuncName, 2)
+        Return False
+    Endif
+    ; ---------------------------------------
+    ; Si objet invalide => on affiche les infos et on retourne l objet
+    If IsObj($oNetworkConnection) = 0 Then
+        _YDLogger_Error("$oNetworkConnection n'est pas un objet valide", $sFuncName)
+        Return False
+    EndIf
+    ; ---------------------------------------
+    ; Si tout est OK => on affiche les infos et on retourne l objet
+    For $oConnection In $oNetworkConnection
+        _YDLogger_Var("Name", $oConnection.Name, $sFuncName, 2)
+        _YDLogger_Var("ConnectionState", $oConnection.ConnectionState, $sFuncName, 2)
+        _YDLogger_Var("ConnectionType", $oConnection.ConnectionType, $sFuncName, 2)
+        _YDLogger_Var("LocalName", $oConnection.LocalName, $sFuncName, 2)
+        _YDLogger_Var("RemotePath", $oConnection.RemotePath, $sFuncName, 2)
+    Next
+    _YDLogger_Log("Retour objet $oNetworkConnection", $sFuncName, 2)
+    return $oNetworkConnection
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_DeleteNetworkConnection
+; Description ...: Supprime une connexion reseau
+; Syntax.........: _YDTool_DeleteNetworkConnection($_sLetter)
+; Parameters ....: $_sLetter	- Lettre reseau au format "R:"
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 22/03/2021
+; Remarks .......: 
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_DeleteNetworkConnection($_sLetter)
+	Local $sFuncName = "_YDTool_DeleteNetworkConnection"
+    Local $hTimer = TimerInit()
+    _YDLogger_Var("$_sLetter", $_sLetter, $sFuncName, 2)
+    If IsObj(_YDTool_GetNetworkConnectionInfoByLetter($_sLetter)) = 0 Then
+        _YDLogger_Log("Le lecteur reseau " & $_sLetter & " n existe pas", $sFuncName)
+        Return True
+    Endif
+    ; ---------------------------------------
+    ; On tente de supprimer le lecteur reseau
+    _YDLogger_Log("Tentative de suppression du lecteur " & $_sLetter & " par _WinNet_CancelConnection2()", $sFuncName)
+    Local $return_WinNet_CancelConnection2 = _WinNet_CancelConnection2($_sLetter, True, True)
+    _YDLogger_Var("$return_WinNet_CancelConnection2", $return_WinNet_CancelConnection2, $sFuncName, 2)
+    ; On patiente 3 secondes max
+    Do
+        Sleep(10)
+    Until FileExists($_sLetter) = 0 Or TimerDiff($hTimer) >= 3000
+    ; ---------------------------------------
+    ; Si toujours actif on retente avec une autre option
+    If IsObj(_YDTool_GetNetworkConnectionInfoByLetter($_sLetter)) = 1 Then
+        _YDLogger_Log("Tentative de suppression du lecteur " & $_sLetter & " par DriveMapDel()", $sFuncName)
+        Local $return_DriveMapDel = DriveMapDel($_sLetter)
+        _YDLogger_Var("$return_DriveMapDel", $return_DriveMapDel, $sFuncName, 2)
+        $hTimer = TimerInit()
+        ; On patiente 3 secondes max
+        Do
+            Sleep(10)
+        Until FileExists($_sLetter) = 0 Or TimerDiff($hTimer) >= 2000
+    Endif
+    ; ---------------------------------------
+    ; On log la sortie
+    If IsObj(_YDTool_GetNetworkConnectionInfoByLetter($_sLetter)) = 0 Then
+        _YDLogger_Log("Suppression OK du lecteur reseau " & $_sLetter, $sFuncName)
+        Return True
+    Else
+        _YDLogger_Error("Erreur lors de la suppression du lecteur reseau " & $_sLetter, $sFuncName)        
+        Return False
+    Endif
+EndFunc
+
+; #FUNCTION# ====================================================================================================================
+; Name...........: _YDTool_CreateNetworkConnection
+; Description ...: Creation une connexion reseau
+; Syntax.........: _YDTool_CreateNetworkConnection($_sLetter, $_sPath)
+; Parameters ....: $_sLetter	- Lettre reseau au format "R:"
+;                  $_sPath	    - Chemin reseau au format \\serveur\dossier
+; Return values .: Success      - True
+;                  Failure      - False
+; Author ........: yann.daniel@assurance-maladie.fr
+; Modified.......: 22/03/2021
+; Remarks .......: 
+; Related .......:
+; ===============================================================================================================================
+Func _YDTool_CreateNetworkConnection($_sLetter, $_sPath)
+	Local $sFuncName = "_YDTool_CreateNetworkConnection"
+    _YDLogger_Var("$_sLetter", $_sLetter, $sFuncName, 2)
+    _YDLogger_Var("$_sPath", $_sPath, $sFuncName, 2)
+    Local $bReturn = (DriveMapAdd($_sLetter, $_sPath, $DMA_PERSISTENT) = 1 ? True : False)
+    If IsObj(_YDTool_GetNetworkConnectionInfoByLetter($_sLetter)) = 1 Then
+        _YDLogger_Log("Creation OK du lecteur reseau " & $_sLetter & " => " & $_sPath, $sFuncName)
+        Return True
+    Else
+        _YDLogger_Error("Erreur lors de la suppression du lecteur reseau " & $_sLetter & " => " & $_sPath, $sFuncName)
+        Return False
+    EndIf
+    _YDLogger_Var("bReturn", $bReturn, $sFuncName, 2)
+    Return $bReturn
 EndFunc
