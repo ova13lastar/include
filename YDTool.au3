@@ -29,7 +29,7 @@
 
 ; #VARIABLES# ===================================================================================================================
 _YDGVars_Set("sProgramFilesPath", RegRead("HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion", "ProgramFilesDir"))
-_YDGVars_Set("sPulseRootPathServer", "\\55.126.5.250\bei\PULSE2")
+_YDGVars_Set("sPulseRootPathServer", "\\55.126.4.6\bei\PULSE2")
 _YDGVars_Set("sPulseAntoolsPathServer", _YDGVars_Get("sPulseRootPathServer") & "\_antools")
 _YDGVars_Set("sPsExecExeFullPathServer", _YDGVars_Get("sPulseAntoolsPathServer") & "\" & "PsExec.exe")
 _YDGVars_Set("sAntoolsPathLocal", "C:\APPLILOC\_antools")
@@ -263,7 +263,7 @@ Func _YDTool_ExecuteCommandWithPsExec($_sHost, $_sCommand, $_sPsExecFullPath)
     Local $iReturn = RunWait($sCommandToRun, '', @SW_HIDE)
     _YDLogger_Var("$iReturn", $iReturn, $sFuncName)
     ; Gestion des Return
-    If (@error <> 0 And $iReturn > 0) Then
+    If (@error <> 0 Or int($iReturn) > 0) Then
         _YDLogger_Error("Echec du lancement de la commande : " & $sCommandToRun, $sFuncName)
         $bReturn =  False
     Else
@@ -498,7 +498,7 @@ Func _YDTool_Get7zipExeFullPath($_bAdminShare = False)
     _YDLogger_Var("$_bAdminShare", $_bAdminShare, $sFuncName, 2)
     Local $sProgramFilesPath = _YDTool_GetProgramFilesPath($_bAdminShare)
     _YDLogger_Var("$sProgramFilesPath", $sProgramFilesPath, $sFuncName)
-    Local $sReturn = $sProgramFilesPath & "\7-zip\7z.exe"
+    Local $sReturn = $sProgramFilesPath & "\7-zip\7zG.exe"
     _YDLogger_Var("$sReturn", $sReturn, $sFuncName)
     Return $sReturn
 EndFunc
@@ -705,7 +705,7 @@ Func _YDTool_ExtractArchive($_sSourceFullPath, $_sDestinationPath)
     _YDLogger_Var("$_sDestinationPath", $_sDestinationPath, $sFuncName, 2)
     Local $Local7zipExeFullPath = _YDTool_Get7zipExeFullPath(False)
     _YDLogger_Var("$Local7zipExeFullPath", $Local7zipExeFullPath, $sFuncName)
-    Local $sCommandToRun = @ComSpec & " /c " & ' "' & $Local7zipExeFullPath & '" x -y ' & $_sSourceFullPath & ' -o' & $_sDestinationPath & '\'
+    Local $sCommandToRun = @ComSpec & " /c " & ' "' & $Local7zipExeFullPath & '" x ' & $_sSourceFullPath & ' -o' & $_sDestinationPath & '\ -r -aoa -y'
     _YDLogger_Var("$sCommandToRun", $sCommandToRun, $sFuncName)
     Local $iReturn = RunWait($sCommandToRun, '', @SW_HIDE)
     _YDLogger_Var("$iReturn", $iReturn)
@@ -739,7 +739,7 @@ Func _YDTool_ExtractArchiveWithPsExec($_sHost, $_sSourceFullPath, $_sDestination
     _YDLogger_Var("$_sDestinationPath", $_sDestinationPath, $sFuncName, 2)
     Local $Local7zipExeFullPath = _YDTool_Get7zipExeFullPath(False)
     _YDLogger_Var("$Local7zipExeFullPath", $Local7zipExeFullPath, $sFuncName)
-    Local $sCommandToRun = @ComSpec & " /c " & ' "' & $Local7zipExeFullPath & '" x -y ' & $_sSourceFullPath & ' -o' & $_sDestinationPath & '\'
+    Local $sCommandToRun = @ComSpec & " /c " & ' "' & $Local7zipExeFullPath & '" x ' & $_sSourceFullPath & ' -o' & $_sDestinationPath & '\ -r -aoa -y'
     _YDLogger_Var("$sCommandToRun", $sCommandToRun, $sFuncName)
     If Not _YDTool_ExecuteCommandWithPsExec($_sHost, $sCommandToRun, _YDGVars_Get("sPsExecExeFullPathServer")) Then
         _YDLogger_Error("Extraction du fichier via PsExec impossible : " & $_sDestinationPath, $sFuncName)
